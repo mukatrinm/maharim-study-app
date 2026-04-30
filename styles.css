@@ -381,6 +381,11 @@ main {
   width: 100%;
   height: clamp(440px, 72vh, 720px);
   background: linear-gradient(180deg, #fffefa, #f8fbfa);
+  transition: opacity 220ms ease;
+}
+
+#family-svg.is-rerendering {
+  opacity: 0.35;
 }
 
 .node {
@@ -419,6 +424,51 @@ main {
   fill: rgba(31, 42, 46, 0.45);
   pointer-events: none;
   font-weight: 700;
+}
+
+.gender-silhouette {
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.gender-silhouette circle,
+.gender-silhouette path {
+  fill: rgba(31, 42, 46, 0.85);
+  stroke: none;
+}
+
+.gender-silhouette.female circle,
+.gender-silhouette.female path {
+  fill: var(--accent-2);
+}
+
+.gender-silhouette.male circle,
+.gender-silhouette.male path {
+  fill: var(--accent);
+}
+
+/* Hover-highlight: when an .edge-group is dimmed, fade visually. JS adds
+   .is-faded to non-connected groups when a node is hovered. */
+.edge-group,
+.node {
+  transition: opacity 220ms ease, fill 240ms ease, stroke 240ms ease;
+}
+
+.edge-group.is-faded,
+.node.is-faded {
+  opacity: 0.22;
+}
+
+.node:hover {
+  z-index: 2;
+}
+
+#family-svg.has-hover .edge-group:not(.is-faded) .edge {
+  stroke-width: 3.2;
+}
+
+#family-svg.has-hover .node:not(.is-faded) > rect {
+  stroke-width: 3.5;
 }
 
 .node-badge rect {

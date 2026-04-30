@@ -724,22 +724,37 @@ const familyScenarios = {
         ]
       };
     }),
-    scenario("العقد الفاسد والدخول", (condition) => ({
-      title: "مسألة: النكاح غير الصحيح",
-      subtitle: "العقد الفاسد بعد الدخول ينشر الحرمة، وقبل الدخول لا ينشرها",
-      toggle: { label: "حصل الدخول" },
-      nodes: [
-        node("branch", "الفرع", 470, 130, "neutral", "الفرع", "تزوج الفرع بعقد فاسد ثم فارق."),
-        node("woman", "المرأة", 470, 290, condition ? "blocked" : "allowed", "أثر العقد الفاسد", condition ? "العقد الفاسد بعد الدخول ينشر حرمة المصاهرة." : "إذا فارقها قبل الدخول، جاز للأصل أن يتزوجها."),
-        node("origin", "الأصل", 470, 455, "neutral", "الأصل", "الأصل هو الأب أو الجد ونحوه."),
-        node("rule", condition ? "تنشر\nالحرمة" : "لا تنشر\nالحرمة", 720, 290, condition ? "blocked" : "allowed", "قاعدة المسألة", condition ? "بعد الدخول تثبت حرمة المصاهرة." : "قبل الدخول لا تثبت حرمة المصاهرة ولا التوارث.")
-      ],
-      edges: [
-        edge("branch", "woman", { label: "عقد فاسد" }),
-        edge("origin", "woman", { status: condition ? "blocked" : "allowed", label: condition ? "تحرم" : "يجوز", curve: 60 }),
-        edge("woman", "rule", { status: condition ? "blocked" : "allowed", label: condition ? "بعد دخول" : "قبل دخول" })
-      ]
-    })),
+    scenario("العقد الفاسد والدخول", (condition) => {
+      const built = genTree({
+        rows: [
+          [node("origin", "الأصل\n(الأب/الجد)", 0, 0, "neutral", "الأصل", "الأصل هو الأب أو الجد. السؤال: هل تحرم عليه هذه المرأة؟", { gender: "m" })],
+          [
+            node("branch", "الفرع", 0, 0, "neutral", "الفرع", "تزوج الفرع (الابن أو الحفيد) بهذه المرأة بعقد فاسد ثم فارق.", { gender: "m" }),
+            node("woman", "المرأة", 0, 0, condition ? "blocked" : "allowed", "محل الخلاف", condition ? "بعد الدخول الحقيقي بها تثبت حرمة المصاهرة." : "إذا فارقها الفرع قبل الدخول لم تنشر الحرمة.", { gender: "f" })
+          ],
+          [
+            node("rule", condition ? "تنشر\nحرمة\nالمصاهرة" : "لا تنشر\nحرمة\nالمصاهرة", 0, 0, condition ? "blocked" : "allowed", "قاعدة المسألة", condition ? "العقد الفاسد بعد الدخول كالعقد الصحيح في نشر الحرمة." : "قدري باشا مادة 135: لا تثبت حرمة المصاهرة ولا التوارث.", { shape: "rule" })
+          ]
+        ],
+        marriages: [["branch", "woman", { status: "temporary" }]],
+        parents: [
+          { id: "branch", parents: ["origin"] },
+          { id: "rule", parents: ["woman"] }
+        ],
+        rowHeight: 175,
+        colWidth: 240
+      });
+      return {
+        title: "مسألة: النكاح غير الصحيح (مادة 135 قدري باشا)",
+        subtitle: "العقد الفاسد بعد الدخول ينشر الحرمة، وقبل الدخول لا ينشرها",
+        toggle: { label: "حصل الدخول" },
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("origin", "woman", { status: condition ? "blocked" : "allowed", label: condition ? "تحرم" : "يجوز", curve: 50 })
+        ]
+      };
+    }),
     scenario("المصاهرة بالزنا", (condition) => ({
       title: "مسألة: هل الزنا يثبت حرمة المصاهرة؟",
       subtitle: "بدّل بين المعتمد الحنفي والعمل بالقول الآخر للمقارنة",
@@ -1462,7 +1477,7 @@ function drawFamily() {
           <text x="${info.x}" y="${info.y + 1}">${info.text}</text>
         </g>`
       : "";
-    return `<g class="edge-group ${status} ${kind}"><path class="edge ${status} ${kind}" d="${d}" />${extra}${label}</g>`;
+    return `<g class="edge-group ${status} ${kind}" data-from="${escapeXml(item.from)}" data-to="${escapeXml(item.to)}"><path class="edge ${status} ${kind}" d="${d}" />${extra}${label}</g>`;
   }).join("");
 
   // Render nodes with adaptive sizing
@@ -1477,9 +1492,15 @@ function drawFamily() {
     const rectY = item.y - s.h / 2;
     const isCenter = item.id === "self" || item.shape === "rule";
     const shape = `<rect x="${rectX}" y="${rectY}" width="${s.w}" height="${s.h}" rx="${isCenter ? 12 : Math.min(22, rx)}"></rect>`;
-    const genderIcon = item.gender
-      ? `<text class="gender-icon" x="${rectX + 14}" y="${rectY + 18}">${item.gender === "f" ? "♀" : "♂"}</text>`
-      : "";
+    // Simple silhouette: head circle + shoulders. Female has a slight skirt/triangle.
+    const iconCx = rectX + 16;
+    const iconCy = rectY + 18;
+    let genderIcon = "";
+    if (item.gender === "m") {
+      genderIcon = `<g class="gender-silhouette male"><circle cx="${iconCx}" cy="${iconCy - 4}" r="3.6"></circle><path d="M ${iconCx - 5.5} ${iconCy + 7} L ${iconCx - 5.5} ${iconCy + 1.5} Q ${iconCx} ${iconCy - 1.5} ${iconCx + 5.5} ${iconCy + 1.5} L ${iconCx + 5.5} ${iconCy + 7} Z"></path></g>`;
+    } else if (item.gender === "f") {
+      genderIcon = `<g class="gender-silhouette female"><circle cx="${iconCx}" cy="${iconCy - 4}" r="3.6"></circle><path d="M ${iconCx - 6.5} ${iconCy + 8} L ${iconCx - 4} ${iconCy + 1} Q ${iconCx} ${iconCy - 1.5} ${iconCx + 4} ${iconCy + 1} L ${iconCx + 6.5} ${iconCy + 8} Z"></path></g>`;
+    }
     const badge = item.badge
       ? `<g class="node-badge"><rect x="${rectX + s.w / 2 - 30}" y="${rectY - 14}" width="60" height="22" rx="11"></rect><text x="${rectX + s.w / 2}" y="${rectY - 1}">${escapeXml(item.badge)}</text></g>`
       : "";
@@ -1494,7 +1515,31 @@ function drawFamily() {
   }).join("");
 
   familySvg.innerHTML = `${edgesSvg}${nodesSvg}`;
-  familySvg.querySelectorAll(".node").forEach((el) => {
+
+  const allNodeEls = familySvg.querySelectorAll(".node");
+  const allEdgeEls = familySvg.querySelectorAll(".edge-group");
+
+  function highlightNeighborhood(focusId) {
+    if (!focusId) {
+      familySvg.classList.remove("has-hover");
+      allNodeEls.forEach((el) => el.classList.remove("is-faded"));
+      allEdgeEls.forEach((el) => el.classList.remove("is-faded"));
+      return;
+    }
+    const connectedIds = new Set([focusId]);
+    allEdgeEls.forEach((el) => {
+      if (el.dataset.from === focusId) connectedIds.add(el.dataset.to);
+      if (el.dataset.to === focusId) connectedIds.add(el.dataset.from);
+    });
+    familySvg.classList.add("has-hover");
+    allNodeEls.forEach((el) => el.classList.toggle("is-faded", !connectedIds.has(el.dataset.node)));
+    allEdgeEls.forEach((el) => {
+      const touched = el.dataset.from === focusId || el.dataset.to === focusId;
+      el.classList.toggle("is-faded", !touched);
+    });
+  }
+
+  allNodeEls.forEach((el) => {
     el.addEventListener("click", () => showPerson(nodesById[el.dataset.node]));
     el.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
@@ -1502,6 +1547,10 @@ function drawFamily() {
         showPerson(nodesById[el.dataset.node]);
       }
     });
+    el.addEventListener("mouseenter", () => highlightNeighborhood(el.dataset.node));
+    el.addEventListener("mouseleave", () => highlightNeighborhood(null));
+    el.addEventListener("focus", () => highlightNeighborhood(el.dataset.node));
+    el.addEventListener("blur", () => highlightNeighborhood(null));
   });
   showPerson(data.nodes[0]);
 }
@@ -1839,7 +1888,14 @@ exampleSelect.addEventListener("change", () => {
   drawFamily();
 });
 
-conditionInput.addEventListener("change", drawFamily);
+conditionInput.addEventListener("change", () => {
+  // Brief fade-flash gives visual feedback when re-rendering after toggle.
+  familySvg.classList.add("is-rerendering");
+  requestAnimationFrame(() => {
+    drawFamily();
+    requestAnimationFrame(() => familySvg.classList.remove("is-rerendering"));
+  });
+});
 document.querySelector("#shuffle-rule").addEventListener("click", () => {
   const grid = document.querySelector("#rules-grid");
   const first = grid.firstElementChild;
