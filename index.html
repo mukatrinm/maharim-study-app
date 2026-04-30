@@ -16,6 +16,8 @@
         <button class="nav-button active" data-view="map">الخريطة</button>
         <button class="nav-button" data-view="lab">مختبر العائلة</button>
         <button class="nav-button" data-view="rules">القواعد</button>
+        <button class="nav-button" data-view="compare">مقارنات</button>
+        <button class="nav-button" data-view="exam">أسئلة الشيخ</button>
         <button class="nav-button" data-view="quiz">اختبر نفسك</button>
       </nav>
     </header>
@@ -125,6 +127,40 @@
           </div>
           <div class="case-result" id="case-result">اختر مسألة ثم اضغط افحص الحكم.</div>
         </section>
+      </section>
+
+      <section class="view" id="compare-view" aria-labelledby="compare-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="compare-title">جداول المقارنة</h2>
+            <p>كل المسائل الخلافية والمذاهب في مكان واحد، بألوان موحَّدة لتسريع الحفظ قبل الامتحان.</p>
+          </div>
+          <div class="madhab-legend" aria-label="مفتاح الألوان">
+            <span class="m-pill m-hanafi">الحنفية</span>
+            <span class="m-pill m-shafii">الشافعية</span>
+            <span class="m-pill m-maliki">المالكية</span>
+            <span class="m-pill m-hanbali">الحنبلية</span>
+            <span class="m-pill m-court">القضاء</span>
+          </div>
+        </div>
+        <div class="compare-grid" id="compare-grid"></div>
+      </section>
+
+      <section class="view" id="exam-view" aria-labelledby="exam-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="exam-title">أسئلة الشيخ — بصيغته الحرفية</h2>
+            <p>أسئلة الامتحان من المحاضرة، مرتبة حسب الموضوع، مع الإجابة الملخّصة.</p>
+          </div>
+          <div class="exam-filters" role="tablist" aria-label="تصفية حسب الموضوع">
+            <button class="segment active" data-exam="all">الكل</button>
+            <button class="segment" data-exam="nasab">النسب</button>
+            <button class="segment" data-exam="musaharah">المصاهرة</button>
+            <button class="segment" data-exam="radaa">الرضاع</button>
+            <button class="segment" data-exam="temporary">التأقيت</button>
+          </div>
+        </div>
+        <div class="exam-grid" id="exam-grid"></div>
       </section>
 
       <section class="view" id="quiz-view" aria-labelledby="quiz-title">

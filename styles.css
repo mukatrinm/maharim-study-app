@@ -656,6 +656,210 @@ select {
   margin-top: 12px;
 }
 
+/* ─── Comparisons view ─────────────────────────────────────────────────────── */
+:root {
+  --m-hanafi: #d6eaff;
+  --m-hanafi-line: #4682c8;
+  --m-shafii: #d6f1de;
+  --m-shafii-line: #2f9e5e;
+  --m-maliki: #fff1c4;
+  --m-maliki-line: #c89a2e;
+  --m-hanbali: #ffd9bf;
+  --m-hanbali-line: #c66a2a;
+  --m-court: #e7d8ff;
+  --m-court-line: #7d4fc7;
+  --m-allowed: #e4f2ea;
+  --m-blocked: #f8e7e3;
+  --m-amber: #fff0d8;
+  --m-neutral: #f7f4ee;
+}
+
+.madhab-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.m-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid transparent;
+}
+
+.m-pill.m-hanafi { background: var(--m-hanafi); color: #2c4f7a; border-color: var(--m-hanafi-line); }
+.m-pill.m-shafii { background: var(--m-shafii); color: #1f6a3f; border-color: var(--m-shafii-line); }
+.m-pill.m-maliki { background: var(--m-maliki); color: #7e6320; border-color: var(--m-maliki-line); }
+.m-pill.m-hanbali { background: var(--m-hanbali); color: #884320; border-color: var(--m-hanbali-line); }
+.m-pill.m-court { background: var(--m-court); color: #4f3380; border-color: var(--m-court-line); }
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.compare-card {
+  background: rgba(255, 254, 250, 0.93);
+  border: 1px solid rgba(88, 78, 64, 0.18);
+  border-radius: 8px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+
+.compare-card header {
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(88, 78, 64, 0.2);
+}
+
+.compare-card header strong {
+  display: block;
+  color: var(--accent);
+  font-size: 17px;
+}
+
+.compare-card header span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.compare-table-wrap {
+  overflow-x: auto;
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.compare-table th,
+.compare-table td {
+  padding: 9px 12px;
+  text-align: right;
+  border-bottom: 1px solid rgba(88, 78, 64, 0.12);
+}
+
+.compare-table th {
+  background: rgba(35, 109, 120, 0.08);
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.compare-table tr.m-hanafi td:first-child { background: var(--m-hanafi); border-right: 4px solid var(--m-hanafi-line); }
+.compare-table tr.m-shafii td:first-child { background: var(--m-shafii); border-right: 4px solid var(--m-shafii-line); }
+.compare-table tr.m-maliki td:first-child { background: var(--m-maliki); border-right: 4px solid var(--m-maliki-line); }
+.compare-table tr.m-hanbali td:first-child { background: var(--m-hanbali); border-right: 4px solid var(--m-hanbali-line); }
+.compare-table tr.m-court td:first-child { background: var(--m-court); border-right: 4px solid var(--m-court-line); }
+.compare-table tr.m-allowed td:first-child { background: var(--m-allowed); border-right: 4px solid var(--green); }
+.compare-table tr.m-blocked td:first-child { background: var(--m-blocked); border-right: 4px solid var(--red); }
+.compare-table tr.m-amber td:first-child { background: var(--m-amber); border-right: 4px solid var(--amber); }
+.compare-table tr.m-neutral td:first-child { background: var(--m-neutral); border-right: 4px solid var(--accent); }
+
+/* ─── Exam questions view ─────────────────────────────────────────────────── */
+.exam-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.exam-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.exam-card {
+  background: rgba(255, 254, 250, 0.93);
+  border: 1px solid rgba(88, 78, 64, 0.18);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(32, 38, 40, 0.06);
+  overflow: hidden;
+  transition: box-shadow 200ms ease;
+}
+
+.exam-card[open] {
+  box-shadow: 0 8px 22px rgba(32, 38, 40, 0.12);
+  border-color: rgba(35, 109, 120, 0.4);
+}
+
+.exam-card summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+  padding: 14px 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.exam-card summary::-webkit-details-marker { display: none; }
+
+.exam-card summary::after {
+  content: "+";
+  margin-right: auto;
+  color: var(--accent);
+  font-weight: 900;
+  font-size: 20px;
+}
+
+.exam-card[open] summary::after { content: "−"; }
+
+.exam-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.exam-id {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.exam-q {
+  flex: 1;
+  min-width: 240px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.exam-answer {
+  padding: 0 18px 16px;
+  border-top: 1px dashed rgba(88, 78, 64, 0.2);
+  margin-top: 4px;
+  padding-top: 12px;
+  color: #2b3a3e;
+  line-height: 1.85;
+}
+
+.exam-answer strong {
+  color: var(--accent-2);
+  margin-left: 6px;
+}
+
+.empty {
+  padding: 28px;
+  text-align: center;
+  color: var(--muted);
+  background: rgba(255, 254, 250, 0.6);
+  border: 1px dashed rgba(88, 78, 64, 0.25);
+  border-radius: 8px;
+}
+
+@media (max-width: 980px) {
+  .compare-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 980px) {
   .topbar,
   .hero-grid,

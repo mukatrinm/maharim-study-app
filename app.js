@@ -1296,6 +1296,162 @@ function renderFlashcard(showBack = false) {
   document.querySelector("#toggle-flash").textContent = showBack ? "أخف الجواب" : "أظهر الجواب";
 }
 
+// ─── Comparisons (madhabs) ────────────────────────────────────────────────────
+const comparisons = [
+  {
+    title: "حرمة المصاهرة بالزنا",
+    subtitle: "هل تثبت حرمة المصاهرة بالزنا؟",
+    headers: ["المذهب", "الحكم", "السبب / الأثر"],
+    rows: [
+      { madhab: "shafii", cells: ["الشافعية والمالكية", "❌ لا تثبت", "لا يحرم على الزاني الزواج بأم المزني بها أو ابنتها."] },
+      { madhab: "hanafi", cells: ["الحنفية", "✅ تثبت بجميع أنواعها", "تحرم أصول المزني بها وفروعها عليه، وعلى أصوله وفروعه."] },
+      { madhab: "court",  cells: ["العمل القضائي", "🟢 يُؤخذ بقول الحنفية", "لسكوت قانون حقوق العائلة عن المسألة."] }
+    ]
+  },
+  {
+    title: "مقدار الرضاع المحرّم",
+    subtitle: "الحنفية والشافعية مع المختار للإفتاء",
+    headers: ["وجه المقارنة", "الحنفية", "الشافعية"],
+    rows: [
+      { madhab: "neutral", cells: ["المقدار", "ولو بمصة أو قطرة", "خمس رضعات متفرقات مشبعات"] },
+      { madhab: "neutral", cells: ["الزمن", "في الحولين", "في الحولين"] },
+      { madhab: "neutral", cells: ["الوصول", "إلى الجوف", "إلى الجوف"] },
+      { madhab: "hanafi",  cells: ["الإفتاء ابتداءً (قبل الزواج)", "🟢 يُؤخذ به احتياطاً", "—"] },
+      { madhab: "shafii",  cells: ["الإفتاء بقاءً (بعد الزواج)", "—", "🟢 يُؤخذ به حفاظاً على الأسرة"] },
+      { madhab: "blocked", cells: ["النتيجة عند الثبوت", "التفريق بين الزوجين", "التفريق بين الزوجين"] }
+    ]
+  },
+  {
+    title: "آثار التفريق بسبب الرضاع",
+    subtitle: "قبل الدخول وبعده",
+    headers: ["الحالة", "المهر", "النفقة والسكنى"],
+    rows: [
+      { madhab: "allowed", cells: ["قبل الدخول", "❌ لا مهر", "❌ لا نفقة، لا سكنى"] },
+      { madhab: "amber",   cells: ["بعد الدخول", "✅ الأقل من المسمّى ومهر المثل", "❌ لا نفقة، لا سكنى"] }
+    ]
+  },
+  {
+    title: "العقد الفاسد قبل/بعد الدخول",
+    subtitle: "أثر العقد غير الصحيح على حرمة المصاهرة (مادة 135 قدري باشا)",
+    headers: ["الحالة", "حرمة المصاهرة", "التوارث"],
+    rows: [
+      { madhab: "allowed", cells: ["تفريق/وفاة قبل الدخول ودواعيه", "❌ لا تثبت", "❌ لا توارث"] },
+      { madhab: "blocked", cells: ["تفريق/وفاة بعد الدخول", "✅ تثبت", "—"] }
+    ]
+  },
+  {
+    title: "خطبة المعتدة والمخطوبة",
+    subtitle: "متى يجوز التصريح والتعريض؟",
+    headers: ["الحالة", "التصريح", "التعريض"],
+    rows: [
+      { madhab: "blocked", cells: ["مخطوبة وخطبتها قائمة", "🚫 ممنوع", "🚫 ممنوع إن أفسد"] },
+      { madhab: "blocked", cells: ["معتدة من طلاق رجعي", "🚫 ممنوع", "🚫 ممنوع"] },
+      { madhab: "hanafi",  cells: ["معتدة من طلاق بائن (الحنفية)", "🚫 ممنوع", "🚫 ممنوع"] },
+      { madhab: "shafii",  cells: ["معتدة من طلاق بائن (الشافعية)", "🚫 ممنوع", "✅ جائز بضوابط"] },
+      { madhab: "allowed", cells: ["معتدة من وفاة", "🚫 ممنوع اتفاقاً", "✅ جائز عند من يُجيزه"] }
+    ]
+  },
+  {
+    title: "التقسيم العام للمحرمات",
+    subtitle: "تأبيد وتأقيت",
+    headers: ["النوع", "السبب / الصنف", "متى يثبت / يزول"],
+    rows: [
+      { madhab: "blocked", cells: ["تأبيد — نسب", "أم، بنت، أخت، عمة، خالة، بنت أخ، بنت أخت", "بأصل العلاقة"] },
+      { madhab: "blocked", cells: ["تأبيد — مصاهرة (1)", "زوجة الأب/الجد", "بمجرد العقد"] },
+      { madhab: "blocked", cells: ["تأبيد — مصاهرة (2)", "أم الزوجة", "بمجرد العقد"] },
+      { madhab: "blocked", cells: ["تأبيد — مصاهرة (3)", "الربيبة", "🔴 بالدخول بالأم"] },
+      { madhab: "blocked", cells: ["تأبيد — مصاهرة (4)", "زوجة الابن", "بمجرد العقد"] },
+      { madhab: "blocked", cells: ["تأبيد — رضاع", "ما يحرم بالنسب/المصاهرة (إلا 10 مستثنيات)", "بشروط الرضاع"] },
+      { madhab: "amber",   cells: ["تأقيت", "زوجة الغير، الجمع، المطلقة 3، الخامسة، غير الكتابية", "إذا زال السبب زال التحريم"] }
+    ]
+  }
+];
+
+// ─── Verbatim exam questions from the lecture notes ─────────────────────────
+const examQuestions = [
+  // النسب
+  { topic: "nasab", id: "3.3.1", q: "اذكر الأصناف الأربعة للمحرمات بالنسب.", a: "1) الأمهات وإن علون. 2) البنات وإن نزلن. 3) فروع الأبوين (الأخوات وبنات الإخوة وبنات الأخوات). 4) العمات والخالات للشخص ولأصوله." },
+  { topic: "nasab", id: "3.3.2", q: "هل تحرم بنت العمة على الشخص؟ ولماذا؟", a: "لا تحرم. لأن بنات العم والعمة والخال والخالة مستثناة من المحرمات بالنسب، وإن كانت أمهاتهن (العمة والخالة) محرمات." },
+  { topic: "nasab", id: "3.3.3", q: "ما الفرق بين الأخت لأب والأخت لأم؟", a: "الأخت لأب: من نفس الأب وأم مختلفة. الأخت لأم: من نفس الأم وأب مختلف." },
+  { topic: "nasab", id: "3.3.4", q: "هل تحرم عمة الجد؟ تحت أي صنف تندرج؟", a: "نعم تحرم. تندرج تحت الصنف الرابع: عمات وخالات الأصول وإن علون." },
+  // المصاهرة
+  { topic: "musaharah", id: "3.6.1", q: "اذكر الأصناف الأربعة للمحرمات بالمصاهرة.", a: "1) زوجة الأب والجد وإن علا — بمجرد العقد. 2) أم الزوجة وجداتها — بمجرد العقد. 3) الربائب — بشرط الدخول بالأم. 4) زوجات الأبناء وإن نزلوا — بمجرد العقد." },
+  { topic: "musaharah", id: "3.6.2", q: "متى تحرم بنت الزوجة (الربيبة)؟ ومتى لا تحرم؟", a: "تحرم إذا دخل الزوج بأمها دخولاً حقيقياً. لا تحرم إذا عقد على الأم ولم يدخل بها ثم طلقها أو ماتت." },
+  { topic: "musaharah", id: "3.6.3", q: "ما الفرق بين تحريم أم الزوجة وتحريم بنت الزوجة من حيث شرط الدخول؟", a: "أم الزوجة تحرم بمجرد العقد. بنت الزوجة (الربيبة) لا تحرم إلا بالدخول بأمها." },
+  { topic: "musaharah", id: "3.6.4", q: "اذكر القاعدتين الذهبيّتين في باب المصاهرة.", a: "1) العقد على البنات يحرّم الأمهات. 2) الدخول بالأمهات يحرّم البنات." },
+  { topic: "musaharah", id: "3.6.5", q: "هل تثبت حرمة المصاهرة بالزنا في العمل القضائي؟ ولماذا؟", a: "نعم، يُصار إلى المعتمد عند الحنفية لسكوت قانون حقوق العائلة. الحنفية: تثبت. الشافعية والمالكية: لا تثبت." },
+  { topic: "musaharah", id: "3.6.6", q: "هل تحرم أم زوجة الابن على والد الابن؟", a: "لا تحرم. لأن أصول زوجة الابن (كأمها) لا تحرم على أصل الزوج." },
+  // الرضاع
+  { topic: "radaa", id: "3.12.1", q: "ما القاعدة العامة في الرضاع المحرّم؟", a: "يحرم من الرضاع ما يحرم من النسب والمصاهرة — إلا ما استُثني." },
+  { topic: "radaa", id: "3.12.2", q: "ما شروط الرضاع المحرّم؟", a: "1) أن يحصل خلال السنتين الأوليين من ولادة الطفل. 2) أن يصل اللبن إلى جوف الصغير على وجه اليقين." },
+  { topic: "radaa", id: "3.12.3", q: "ما الفرق بين الحنفية والشافعية في مقدار الرضاع المحرّم؟ وما المختار للإفتاء؟", a: "الحنفية: ولو بقطرة. الشافعية: خمس رضعات متفرقات مشبعات. للإفتاء: قول الحنفية ابتداءً احتياطاً، وقول الشافعية بقاءً حفاظاً على الأسرة." },
+  { topic: "radaa", id: "3.12.4", q: "ما المقصود بـ«لبن الفحل»؟ مع مثال.", a: "اللبن يُنسب لكل من المرضعة وللرجل الذي ثار اللبن بسببه. مثال: زوجتا فوزي — سامية أرضعت عمر، وخالدية أرضعت انتصار. تحرم انتصار على عمر لأنها صارت أخته بالرضاع من جهة الأب فوزي." },
+  { topic: "radaa", id: "3.12.5", q: "اذكر ثلاثة من المستثنيات (التي لا تحرم بالرضاع).", a: "1) أم الأخ من الرضاع. 2) أخت الابن من الرضاع. 3) جدة الابن من الرضاع." },
+  { topic: "radaa", id: "3.12.6", q: "اشرح: لماذا قد تكون الأخت بالرضاع لشخص ليست أختاً بالرضاع لأخيه؟", a: "لأن العبرة بمن رضع من المرأة. عمر رضع من امرأة فيصبح إخوانه بالرضاع كل من رضع منها أو ولدها. أخوه محمود لم يرضع، فبنات تلك المرأة أخوات لعمر فقط دون محمود." },
+  { topic: "radaa", id: "3.12.7", q: "ما الآثار المترتبة على اكتشاف المحرمية بالرضاع بعد العقد قبل الدخول؟", a: "يفرّق القاضي بينهما، ولا مهر للمرأة، ولا نفقة، ولا سكنى." },
+  { topic: "radaa", id: "3.12.8", q: "متى يكون الرجل أباً بالرضاع؟ ومتى لا يكون؟", a: "يكون أباً بالرضاع إذا كان زوج المرضعة وقت الرضاع وكان اللبن بسببه (لبن الفحل). لا يكون أباً بالرضاع إذا كان اللبن بسبب هرمونات لا حمل — تأخذ البنت حكم الربيبة بالنسبة له." },
+  // التأقيت
+  { topic: "temporary", id: "4.6.1", q: "اشرح قاعدة: إذا زال المانع عاد الممنوع مباحاً.", a: "في التحريم المؤقت، التحريم سببه مانع يزول. فإذا زال المانع (طلاق، انقضاء عدة، إسلام...) عاد الزواج مباحاً." },
+  { topic: "temporary", id: "4.6.2", q: "بيّن قاعدة منع الجمع بين امرأتين مع الأمثلة.", a: "لا يجوز الجمع بين امرأتين إذا فُرضت إحداهما ذكراً حرم زواجه من الأخرى. أمثلة: الأختان، المرأة وعمتها، المرأة وخالتها، المرأة وبنت أخيها." },
+  { topic: "temporary", id: "4.6.3", q: "متى تحل المطلقة ثلاثاً لزوجها الأول؟", a: "بعد زواج صحيح من زوج آخر، ودخول حقيقي، ثم فراق، ثم انتهاء عدتها — بلا اتفاق تحليل." },
+  { topic: "temporary", id: "4.6.4", q: "ما حكم زواج التحليل؟", a: "محرم. ورد لعن المحلِّل والمحلَّل له، وسمي «التيس المستعار» في كلام الفقهاء." },
+  { topic: "temporary", id: "4.6.5", q: "ما حكم الزواج من غير الكتابية؟", a: "محرم اتفاقاً. تزول الحرمة بإسلامها أو تحقق وصف الكتابية فيها." }
+];
+
+const examTopicLabel = {
+  nasab: "النسب",
+  musaharah: "المصاهرة",
+  radaa: "الرضاع",
+  temporary: "التأقيت"
+};
+
+let activeExamTopic = "all";
+
+function renderComparisons() {
+  const grid = document.querySelector("#compare-grid");
+  if (!grid) return;
+  grid.innerHTML = comparisons.map((table) => `
+    <article class="compare-card">
+      <header>
+        <strong>${escapeXml(table.title)}</strong>
+        <span>${escapeXml(table.subtitle)}</span>
+      </header>
+      <div class="compare-table-wrap">
+        <table class="compare-table">
+          <thead>
+            <tr>${table.headers.map((h) => `<th>${escapeXml(h)}</th>`).join("")}</tr>
+          </thead>
+          <tbody>
+            ${table.rows.map((row) => `
+              <tr class="m-${row.madhab}">${row.cells.map((cell) => `<td>${escapeXml(cell)}</td>`).join("")}</tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  `).join("");
+}
+
+function renderExamQuestions() {
+  const grid = document.querySelector("#exam-grid");
+  if (!grid) return;
+  const items = activeExamTopic === "all" ? examQuestions : examQuestions.filter((q) => q.topic === activeExamTopic);
+  if (!items.length) {
+    grid.innerHTML = `<p class="empty">لا أسئلة في هذا التصنيف.</p>`;
+    return;
+  }
+  grid.innerHTML = items.map((item, index) => `
+    <details class="exam-card" data-topic="${item.topic}">
+      <summary>
+        <span class="exam-tag">${escapeXml(examTopicLabel[item.topic])}</span>
+        <span class="exam-id">سؤال ${escapeXml(item.id)}</span>
+        <span class="exam-q">${escapeXml(item.q)}</span>
+      </summary>
+      <div class="exam-answer"><strong>الجواب:</strong> ${escapeXml(item.a)}</div>
+    </details>
+  `).join("");
+}
+
 document.querySelectorAll(".nav-button").forEach((button) => {
   button.addEventListener("click", () => showView(button.dataset.view));
 });
@@ -1308,15 +1464,24 @@ document.querySelectorAll(".decision-node").forEach((button) => {
   });
 });
 
-document.querySelectorAll(".segment").forEach((button) => {
+document.querySelectorAll(".segment[data-family]").forEach((button) => {
   button.addEventListener("click", () => {
-    document.querySelectorAll(".segment").forEach((segment) => segment.classList.remove("active"));
+    document.querySelectorAll(".segment[data-family]").forEach((segment) => segment.classList.remove("active"));
     button.classList.add("active");
     activeFamily = button.dataset.family;
     activeExample = 0;
     conditionInput.checked = true;
     renderExampleOptions();
     drawFamily();
+  });
+});
+
+document.querySelectorAll(".segment[data-exam]").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".segment[data-exam]").forEach((segment) => segment.classList.remove("active"));
+    button.classList.add("active");
+    activeExamTopic = button.dataset.exam;
+    renderExamQuestions();
   });
 });
 
@@ -1350,3 +1515,5 @@ renderRules();
 updateCaseCondition();
 renderQuiz();
 renderFlashcard(false);
+renderComparisons();
+renderExamQuestions();
