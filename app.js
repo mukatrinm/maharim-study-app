@@ -267,15 +267,40 @@ function genTree(spec) {
     });
   });
 
-  // Recenter each child between its parents (two passes for stability)
-  for (let pass = 0; pass < 2; pass++) {
-    parents.forEach(({ id, parents: parentIds }) => {
-      const xs = parentIds.map((pid) => byId[pid]?.x).filter((x) => x !== undefined);
-      if (xs.length) {
-        const avg = xs.reduce((a, b) => a + b, 0) / xs.length;
-        if (byId[id]) byId[id].x = avg;
-      }
+  // Build child-of-parent index
+  const childrenOf = new Map();
+  parents.forEach(({ id, parents: parentIds }) => {
+    parentIds.forEach((pid) => {
+      if (!childrenOf.has(pid)) childrenOf.set(pid, []);
+      childrenOf.get(pid).push(id);
     });
+  });
+  const parentsOfChild = new Map();
+  parents.forEach(({ id, parents: parentIds }) => parentsOfChild.set(id, parentIds));
+
+  // Pass A: children with 2 parents (couple) → place child at midpoint of parents
+  parents.forEach(({ id, parents: parentIds }) => {
+    if (parentIds.length === 2) {
+      const xs = parentIds.map((p) => byId[p]?.x).filter((x) => x !== undefined);
+      if (xs.length === 2 && byId[id]) byId[id].x = (xs[0] + xs[1]) / 2;
+    }
+  });
+
+  // Pass B: bottom-up — each parent floats to the midpoint of its children's
+  // x-range, BUT only when all of those children have it as their sole parent
+  // (i.e., not in a couple with someone at a different x). This keeps
+  // marriages straight while letting hierarchy parents follow their leaves.
+  for (let pass = 0; pass < 2; pass++) {
+    for (let gen = rows.length - 2; gen >= 0; gen--) {
+      rows[gen].forEach((nodeSpec) => {
+        const cs = childrenOf.get(nodeSpec.id);
+        if (!cs || cs.length === 0) return;
+        const allSoleParent = cs.every((cid) => (parentsOfChild.get(cid) || []).length === 1);
+        if (!allSoleParent) return;
+        const xs = cs.map((cid) => byId[cid].x);
+        byId[nodeSpec.id].x = (Math.min(...xs) + Math.max(...xs)) / 2;
+      });
+    }
   }
 
   // Synthesise structural edges
@@ -516,7 +541,49 @@ const familyScenarios = {
         edge("self", "nephew", { status: "blocked", label: "ابن الأخ", curve: 45 }),
         edge("self", "cousin", { status: "allowed", label: "يجوز", curve: -45 })
       ]
-    }))
+    })),
+    scenario("الأصناف الأربعة (شجرة هرمية)", () => {
+      const built = genTree({
+        rows: [
+          [node("root", "المحرمات\nبالنسب", 0, 0, "blocked", "الجذر", "الأصناف الأربعة الكبرى للمحرمات بسبب القرابة الدموية.", { shape: "rule" })],
+          [
+            node("c1", "الأمهات\nوإن علون", 0, 0, "blocked", "الصنف 1", "الأم وأم الأم وأم الأب، وكل جدة وإن علت.", { shape: "rule" }),
+            node("c2", "البنات\nوإن نزلن", 0, 0, "blocked", "الصنف 2", "البنت وبنت الابن وبنت البنت، وكل من نزل.", { shape: "rule" }),
+            node("c3", "فروع الأبوين", 0, 0, "blocked", "الصنف 3", "الأخوات وبنات الإخوة وبنات الأخوات.", { shape: "rule" }),
+            node("c4", "العمات\nوالخالات", 0, 0, "blocked", "الصنف 4", "للشخص ولأصوله، وإن علون.", { shape: "rule" })
+          ],
+          [
+            node("e1", "الأم", 0, 0, "blocked", "مثال", "الأم نفسها."),
+            node("e2", "الجدة", 0, 0, "blocked", "مثال", "أم الأب أو أم الأم."),
+            node("e3", "البنت", 0, 0, "blocked", "مثال", "البنت المباشرة."),
+            node("e4", "بنت الابن", 0, 0, "blocked", "مثال", "وإن نزلت."),
+            node("e5", "الأخت", 0, 0, "blocked", "مثال", "شقيقة، لأب، أو لأم."),
+            node("e6", "بنت الأخت", 0, 0, "blocked", "مثال", "بنات الإخوة والأخوات."),
+            node("e7", "العمة", 0, 0, "blocked", "مثال", "أخت الأب."),
+            node("e8", "الخالة", 0, 0, "blocked", "مثال", "أخت الأم.")
+          ]
+        ],
+        marriages: [],
+        parents: [
+          { id: "c1", parents: ["root"] }, { id: "c2", parents: ["root"] },
+          { id: "c3", parents: ["root"] }, { id: "c4", parents: ["root"] },
+          { id: "e1", parents: ["c1"] }, { id: "e2", parents: ["c1"] },
+          { id: "e3", parents: ["c2"] }, { id: "e4", parents: ["c2"] },
+          { id: "e5", parents: ["c3"] }, { id: "e6", parents: ["c3"] },
+          { id: "e7", parents: ["c4"] }, { id: "e8", parents: ["c4"] }
+        ],
+        rowHeight: 175,
+        colWidth: 280,
+        siblingWidth: 135
+      });
+      return {
+        title: "الأصناف الأربعة كشجرة هرمية",
+        subtitle: "ركّز على البنية: من الجذر إلى الأمثلة المباشرة",
+        toggle: null,
+        nodes: built.nodes,
+        edges: built.extraEdges
+      };
+    })
   ],
   musaharah: [
     scenario("الخريطة العامة للمصاهرة", (condition) => ({
@@ -731,6 +798,47 @@ const familyScenarios = {
           edge("grand", "hindDaughter", { status: "allowed", label: "يجوز", curve: -55 }),
           edge("rule", "grand", { label: "تطبيق", curve: -30 })
         ]
+      };
+    }),
+    scenario("الأصناف الأربعة (شجرة هرمية)", () => {
+      const built = genTree({
+        rows: [
+          [node("root", "المحرمات\nبالمصاهرة", 0, 0, "blocked", "الجذر", "الأصناف الأربعة للمحرمات بالمصاهرة.", { shape: "rule" })],
+          [
+            node("c1", "زوجة الأب\nوالجد", 0, 0, "blocked", "الصنف 1", "تحرم بمجرد العقد.", { shape: "rule", badge: "بالعقد" }),
+            node("c2", "أم الزوجة\nوجداتها", 0, 0, "blocked", "الصنف 2", "تحرم بمجرد العقد.", { shape: "rule", badge: "بالعقد" }),
+            node("c3", "الربائب", 0, 0, "blocked", "الصنف 3", "بنات الزوجة وذرياتهن.", { shape: "rule", badge: "بالدخول" }),
+            node("c4", "زوجة الابن\nوإن نزل", 0, 0, "blocked", "الصنف 4", "تحرم بمجرد العقد.", { shape: "rule", badge: "بالعقد" })
+          ],
+          [
+            node("e1", "زوجة الأب", 0, 0, "blocked", "مثال", "بمجرد العقد ولو لم يدخل بها."),
+            node("e2", "زوجة الجد", 0, 0, "blocked", "مثال", "وإن علا."),
+            node("e3", "أم الزوجة", 0, 0, "blocked", "مثال", "بمجرد العقد على البنت."),
+            node("e4", "الجدة\n(أم الأم)", 0, 0, "blocked", "مثال", "وكذا أم الأب وإن علون."),
+            node("e5", "بنت الزوجة", 0, 0, "blocked", "مثال", "🔴 بشرط الدخول بالأم."),
+            node("e6", "بنت بنت\nالزوجة", 0, 0, "blocked", "مثال", "وإن نزلت بنفس الشرط."),
+            node("e7", "زوجة الابن", 0, 0, "blocked", "مثال", "بمجرد العقد ولو لم يدخل بها."),
+            node("e8", "زوجة\nابن الابن", 0, 0, "blocked", "مثال", "وإن نزل.")
+          ]
+        ],
+        parents: [
+          { id: "c1", parents: ["root"] }, { id: "c2", parents: ["root"] },
+          { id: "c3", parents: ["root"] }, { id: "c4", parents: ["root"] },
+          { id: "e1", parents: ["c1"] }, { id: "e2", parents: ["c1"] },
+          { id: "e3", parents: ["c2"] }, { id: "e4", parents: ["c2"] },
+          { id: "e5", parents: ["c3"] }, { id: "e6", parents: ["c3"] },
+          { id: "e7", parents: ["c4"] }, { id: "e8", parents: ["c4"] }
+        ],
+        rowHeight: 185,
+        colWidth: 280,
+        siblingWidth: 135
+      });
+      return {
+        title: "الأصناف الأربعة للمصاهرة (شجرة هرمية)",
+        subtitle: "🧠 الذهبيتان: العقد على البنات يحرّم الأمهات • الدخول بالأمهات يحرّم البنات",
+        toggle: null,
+        nodes: built.nodes,
+        edges: built.extraEdges
       };
     })
   ],
@@ -1155,7 +1263,74 @@ const familyScenarios = {
         edge("nonScripture", "convert", { status: "allowed", label: "بعد إسلامها" }),
         edge("self", "note", { label: "تنبيه" })
       ]
-    }))
+    })),
+    scenario("نكاح الحامل (من الزنا/من زواج)", () => {
+      const built = genTree({
+        rows: [
+          [node("man", "الرجل المسلم", 0, 0, "neutral", "محور المسألة", "ما حكم زواجه من حامل؟ يختلف بحسب مصدر الحمل.", { gender: "m", shape: "rule" })],
+          [
+            node("zinaPreg", "حامل من\nزنا", 0, 0, "temporary", "حامل من زنا", "يصح العقد عليها لكن لا يواقعها الزوج حتى تضع، إلا إذا كان الحمل منه.", { gender: "f" }),
+            node("validPreg", "حامل ثبت\nنسب حملها", 0, 0, "blocked", "حامل من زواج صحيح", "نكاحها حرام لأن الحمل ثابت النسب لزوج آخر.", { gender: "f" })
+          ],
+          [
+            node("zinaResult", "يصح العقد\nبدون مواقعة\nحتى الوضع", 0, 0, "temporary", "النتيجة في حالة الزنا", "العقد صحيح، لكن المواقعة محظورة حتى تضع حملها — إلا إذا كان الحمل منه.", { shape: "rule" }),
+            node("validResult", "النكاح\nحرام", 0, 0, "blocked", "النتيجة في حالة الحمل الثابت", "لا يجوز نكاحها مطلقاً.", { shape: "rule" })
+          ]
+        ],
+        parents: [
+          { id: "zinaPreg", parents: ["man"] },
+          { id: "validPreg", parents: ["man"] },
+          { id: "zinaResult", parents: ["zinaPreg"] },
+          { id: "validResult", parents: ["validPreg"] }
+        ],
+        rowHeight: 175,
+        colWidth: 280
+      });
+      return {
+        title: "نكاح الحامل من الزنا",
+        subtitle: "قدري باشا 29 — يصح نكاح الحامل من الزنا، أما الحامل ثابت نسب حملها فحرام",
+        toggle: null,
+        nodes: built.nodes,
+        edges: built.extraEdges
+      };
+    }),
+    scenario("خطبة المعتدة والمخطوبة", () => {
+      const built = genTree({
+        rows: [
+          [node("root", "خطبة المعتدة\nأو المخطوبة", 0, 0, "neutral", "محور المسألة", "متى يجوز التصريح ومتى يجوز التعريض؟", { shape: "rule" })],
+          [
+            node("c1", "مخطوبة\nخطبتها قائمة", 0, 0, "blocked", "حالة 1", "مخطوبة لرجل آخر — «لا يخطب أحدكم على خطبة أخيه».", { shape: "rule" }),
+            node("c2", "معتدة\nطلاق رجعي", 0, 0, "blocked", "حالة 2", "في حكم الزوجة، لا تصريح ولا تعريض.", { shape: "rule" }),
+            node("c3", "معتدة طلاق\nبائن (حنفية)", 0, 0, "blocked", "حالة 3", "حنفية: لا تصريح ولا تعريض، سداً للباب.", { shape: "rule", badge: "حنفية" }),
+            node("c4", "معتدة طلاق\nبائن (شافعية)", 0, 0, "temporary", "حالة 4", "شافعية: لا تصريح، لكن يجوز التعريض بضوابط.", { shape: "rule", badge: "شافعية" }),
+            node("c5", "معتدة\nمن وفاة", 0, 0, "temporary", "حالة 5", "اتفاقاً لا تصريح. التعريض جائز عند من يجيزه.", { shape: "rule" })
+          ],
+          [
+            node("o1", "❌ تصريح\n❌ تعريض\n(إن أفسد)", 0, 0, "blocked", "النتيجة 1", "ممنوع تماماً.", { shape: "rule" }),
+            node("o2", "❌ تصريح\n❌ تعريض", 0, 0, "blocked", "النتيجة 2", "ممنوع تماماً.", { shape: "rule" }),
+            node("o3", "❌ تصريح\n❌ تعريض", 0, 0, "blocked", "النتيجة 3", "ممنوع تماماً.", { shape: "rule" }),
+            node("o4", "❌ تصريح\n✅ تعريض\nبضوابط", 0, 0, "temporary", "النتيجة 4", "تعريض جائز مع الضوابط.", { shape: "rule" }),
+            node("o5", "❌ تصريح\n✅ تعريض", 0, 0, "temporary", "النتيجة 5", "تعريض جائز عند من يجيزه.", { shape: "rule" })
+          ]
+        ],
+        parents: [
+          { id: "c1", parents: ["root"] }, { id: "c2", parents: ["root"] },
+          { id: "c3", parents: ["root"] }, { id: "c4", parents: ["root"] }, { id: "c5", parents: ["root"] },
+          { id: "o1", parents: ["c1"] }, { id: "o2", parents: ["c2"] },
+          { id: "o3", parents: ["c3"] }, { id: "o4", parents: ["c4"] }, { id: "o5", parents: ["c5"] }
+        ],
+        rowHeight: 185,
+        colWidth: 280,
+        siblingWidth: 135
+      });
+      return {
+        title: "خطبة المعتدة والمخطوبة",
+        subtitle: "كل حالة → نتيجتها (تصريح / تعريض)",
+        toggle: null,
+        nodes: built.nodes,
+        edges: built.extraEdges
+      };
+    })
   ]
 };
 
