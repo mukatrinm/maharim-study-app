@@ -241,6 +241,62 @@ function scenario(label, build) {
   return { label, build };
 }
 
+// Genealogical layout: declare nodes by generation rows, plus marriages and
+// parent→child links. Returns positioned nodes + structural edges to merge
+// into a scenario's edges array. Children are recentered between parents.
+function genTree(spec) {
+  const rows = spec.rows;
+  const marriages = spec.marriages || [];
+  const parents = spec.parents || [];
+  const ROW_H = spec.rowHeight || 190;
+  const COL_W = spec.colWidth || 230;
+  const CENTER_X = spec.centerX || 470;
+  const TOP_Y = spec.topY || 110;
+
+  const positioned = [];
+  const byId = {};
+  rows.forEach((row, gen) => {
+    const total = (row.length - 1) * COL_W;
+    const startX = CENTER_X - total / 2;
+    row.forEach((nodeSpec, col) => {
+      const x = startX + col * COL_W;
+      const y = TOP_Y + gen * ROW_H;
+      const placed = { ...nodeSpec, x, y };
+      positioned.push(placed);
+      byId[nodeSpec.id] = placed;
+    });
+  });
+
+  // Recenter each child between its parents (two passes for stability)
+  for (let pass = 0; pass < 2; pass++) {
+    parents.forEach(({ id, parents: parentIds }) => {
+      const xs = parentIds.map((pid) => byId[pid]?.x).filter((x) => x !== undefined);
+      if (xs.length) {
+        const avg = xs.reduce((a, b) => a + b, 0) / xs.length;
+        if (byId[id]) byId[id].x = avg;
+      }
+    });
+  }
+
+  // Synthesise structural edges
+  const extraEdges = [];
+  marriages.forEach((m) => {
+    const [a, b, opts = {}] = Array.isArray(m) ? m : [m.from, m.to, m];
+    extraEdges.push(edge(a, b, { ...opts, kind: "marriage" }));
+  });
+  parents.forEach(({ id, parents: parentIds, marriage }) => {
+    if (marriage && parentIds.length === 2) {
+      // Render a single child link from the marriage anchor by emitting edges from each parent
+      // (the renderer will draw both as parent-style; visually they meet at the child's top).
+      parentIds.forEach((pid) => extraEdges.push(edge(pid, id, { kind: "parent" })));
+    } else {
+      parentIds.forEach((pid) => extraEdges.push(edge(pid, id, { kind: "parent" })));
+    }
+  });
+
+  return { nodes: positioned, extraEdges };
+}
+
 // approximate char width for Arabic at NODE_FONT — empirically tuned
 function measureText(text, fontSize = NODE_FONT) {
   const lines = String(text).split("\n");
@@ -487,25 +543,38 @@ const familyScenarios = {
         edge("self", "sonWifeMother", { status: "allowed", label: "يجوز", curve: -80 })
       ]
     })),
-    scenario("عبد الله، ازدهار، لطيفة", () => ({
-      title: "مثال: عبد الله وازدهار ولطيفة",
-      subtitle: "أم الزوجة محرمة على الزوج، لكنها ليست محرمة على والد الزوج",
-      toggle: null,
-      nodes: [
-        node("father", "أبو\nعبد الله", 470, 95, "neutral", "والد الزوج", "السؤال في المحاضرة: هل يجوز له الزواج من لطيفة؟"),
-        node("abdullah", "عبد الله", 470, 285, "neutral", "الزوج", "عبد الله عقد على ازدهار."),
-        node("izdihar", "ازدهار\nزوجته", 700, 285, "blocked", "زوجة الابن بالنسبة لأبيه", "ازدهار تحرم على أبي عبد الله لأنها زوجة ابنه."),
-        node("latifa", "لطيفة\nأم ازدهار", 700, 95, "blocked", "أم الزوجة لعبد الله", "لطيفة محرمة على عبد الله لأنها أم زوجته، لكنها جائزة لأبي عبد الله.")
-      ],
-      edges: [
-        edge("father", "abdullah", { label: "أب", curve: -20 }),
-        edge("latifa", "izdihar", { label: "أم", curve: 20 }),
-        edge("abdullah", "izdihar", { label: "زواج" }),
-        edge("abdullah", "latifa", { status: "blocked", label: "أم الزوجة", curve: -70 }),
-        edge("father", "izdihar", { status: "blocked", label: "زوجة الابن", curve: 80 }),
-        edge("father", "latifa", { status: "allowed", label: "يجوز", curve: -30 })
-      ]
-    })),
+    scenario("عبد الله، ازدهار، لطيفة", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("father", "أبو\nعبد الله", 0, 0, "neutral", "والد الزوج", "السؤال في المحاضرة: هل يجوز له الزواج من لطيفة؟", { gender: "m" }),
+            node("latifa", "لطيفة\nأم ازدهار", 0, 0, "blocked", "أم الزوجة لعبد الله", "محرمة على عبد الله لأنها أم زوجته، لكنها جائزة لأبي عبد الله.", { gender: "f" })
+          ],
+          [
+            node("abdullah", "عبد الله", 0, 0, "neutral", "الزوج", "عبد الله عقد على ازدهار.", { gender: "m" }),
+            node("izdihar", "ازدهار", 0, 0, "blocked", "زوجة الابن بالنسبة لأبيه", "ازدهار تحرم على أبي عبد الله لأنها زوجة ابنه.", { gender: "f" })
+          ]
+        ],
+        marriages: [["abdullah", "izdihar"]],
+        parents: [
+          { id: "abdullah", parents: ["father"] },
+          { id: "izdihar", parents: ["latifa"] }
+        ],
+        colWidth: 260
+      });
+      return {
+        title: "مثال: عبد الله وازدهار ولطيفة",
+        subtitle: "أم الزوجة محرمة على الزوج، لكنها ليست محرمة على والد الزوج",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("abdullah", "latifa", { status: "blocked", label: "أم الزوجة", curve: 60 }),
+          edge("father", "izdihar", { status: "blocked", label: "زوجة الابن", curve: -60 }),
+          edge("father", "latifa", { status: "allowed", label: "يجوز" })
+        ]
+      };
+    }),
     scenario("أصول زوجة الابن وفروعها", () => ({
       title: "مثال: أصول زوجة الابن وفروعها",
       subtitle: "زوجة الابن محرمة على الأب، لكن أمها وبنتها ليستا محرمتين عليه بهذا السبب",
@@ -527,44 +596,67 @@ const familyScenarios = {
         edge("father", "wifeDaughter", { status: "allowed", label: "يجوز", curve: -50 })
       ]
     })),
-    scenario("عمر، سعاد، تفاحة", (condition) => ({
-      title: "مثال: شرط الدخول للربيبة",
-      subtitle: "بنت الزوجة لا تحرم إلا بالدخول بأمها",
-      toggle: { label: "دخل عمر بسعاد" },
-      nodes: [
-        node("fatherOmar", "أبو عمر", 470, 90, "neutral", "والد عمر", "لا تصبح تفاحة بنت ابن له."),
-        node("omar", "عمر", 470, 270, "neutral", "الزوج", "عمر تزوج سعاد، ولسعاد بنت اسمها تفاحة من زوج سابق."),
-        node("suad", "سعاد\nالأم", 700, 270, "neutral", "الزوجة والأم", "هي الأم التي يشترط الدخول بها لتحريم بنتها."),
-        node("tuffaha", "تفاحة\nبنت سعاد", 700, 450, condition ? "blocked" : "allowed", "الربيبة", condition ? "بعد الدخول بسعاد، تفاحة محرمة على عمر مؤبداً، لكنها ليست بنت ابن لأبي عمر." : "إذا طلق عمر سعاد قبل الدخول، لا تحرم عليه تفاحة.")
-      ],
-      edges: [
-        edge("fatherOmar", "omar", { label: "أب" }),
-        edge("omar", "suad", { label: "زواج" }),
-        edge("suad", "tuffaha", { label: "أم" }),
-        edge("omar", "tuffaha", { status: condition ? "blocked" : "allowed", label: condition ? "ربيبة محرمة" : "يجوز", curve: -70 }),
-        edge("fatherOmar", "tuffaha", { status: "allowed", label: "يجوز للأب", curve: 70 })
-      ]
-    })),
-    scenario("مريم: البنت اللاحقة", () => ({
-      title: "مثال: البنت اللاحقة بعد الطلاق",
-      subtitle: "البنت التي وُلدت بعد زوال الزوجية ليست ربيبة لذلك الزوج",
-      toggle: null,
-      nodes: [
-        node("omar", "عمر", 470, 270, "neutral", "الزوج السابق", "عمر طلق سعاد."),
-        node("suadPast", "سعاد\nكانت زوجته", 470, 110, "neutral", "الزوجة السابقة", "بعد الطلاق تزوجت رجلاً آخر."),
-        node("newHusband", "زوج آخر", 230, 270, "neutral", "الزوج اللاحق", "مريم ولدت من علاقة سعاد بالزوج الآخر بعد طلاق عمر."),
-        node("mariam", "مريم", 470, 450, "allowed", "ليست ربيبة لعمر", "مريم غير محرمة على عمر لأنها ليست بنت زوجته حال زوجيتها معه."),
-        node("rule", "وقت\nالزوجية", 710, 270, "neutral", "نقطة الفهم", "العبرة هنا أن البنت لم تكن بنتاً لزوجته أثناء قيام الزوجية معه.")
-      ],
-      edges: [
-        edge("omar", "suadPast", { label: "زواج سابق" }),
-        edge("suadPast", "newHusband", { label: "زواج لاحق" }),
-        edge("suadPast", "mariam", { label: "أم" }),
-        edge("newHusband", "mariam", { label: "أب" }),
-        edge("omar", "mariam", { status: "allowed", label: "ليست ربيبة", curve: 70 }),
-        edge("rule", "mariam", { label: "بعد الطلاق" })
-      ]
-    })),
+    scenario("عمر، سعاد، تفاحة", (condition) => {
+      const built = genTree({
+        rows: [
+          [node("fatherOmar", "أبو عمر", 0, 0, "neutral", "والد عمر", "لا تصبح تفاحة بنت ابن له.", { gender: "m" })],
+          [
+            node("omar", "عمر", 0, 0, "neutral", "الزوج", "عمر تزوج سعاد، ولسعاد بنت اسمها تفاحة من زوج سابق.", { gender: "m" }),
+            node("suad", "سعاد", 0, 0, "neutral", "الزوجة والأم", "هي الأم التي يشترط الدخول بها لتحريم بنتها.", { gender: "f" })
+          ],
+          [
+            node("tuffaha", "تفاحة\nبنت سعاد", 0, 0, condition ? "blocked" : "allowed", "الربيبة", condition ? "بعد الدخول بسعاد، تفاحة محرمة على عمر مؤبداً، لكنها ليست بنت ابن لأبي عمر." : "إذا طلق عمر سعاد قبل الدخول، لا تحرم عليه تفاحة.", { gender: "f" })
+          ]
+        ],
+        marriages: [["omar", "suad"]],
+        parents: [
+          { id: "omar", parents: ["fatherOmar"] },
+          { id: "tuffaha", parents: ["suad"] }
+        ],
+        colWidth: 240
+      });
+      return {
+        title: "مثال: شرط الدخول للربيبة",
+        subtitle: "بنت الزوجة لا تحرم إلا بالدخول بأمها",
+        toggle: { label: "دخل عمر بسعاد" },
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("omar", "tuffaha", { status: condition ? "blocked" : "allowed", label: condition ? "ربيبة محرمة" : "يجوز", curve: -55 }),
+          edge("fatherOmar", "tuffaha", { status: "allowed", label: "يجوز للأب", curve: 55 })
+        ]
+      };
+    }),
+    scenario("مريم: البنت اللاحقة", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("omar", "عمر", 0, 0, "neutral", "الزوج السابق", "عمر طلق سعاد.", { gender: "m" }),
+            node("suad", "سعاد", 0, 0, "neutral", "بين زوجين", "بعد طلاق عمر، تزوجت سعاد رجلاً آخر.", { gender: "f" }),
+            node("newHusband", "زوج آخر", 0, 0, "neutral", "الزوج اللاحق", "مريم ولدت من علاقة سعاد بالزوج الآخر بعد طلاق عمر.", { gender: "m" })
+          ],
+          [
+            node("mariam", "مريم", 0, 0, "allowed", "ليست ربيبة لعمر", "مريم غير محرمة على عمر لأنها ليست بنت زوجته حال زوجيتها معه.", { gender: "f" })
+          ]
+        ],
+        marriages: [["suad", "newHusband"]],
+        parents: [
+          { id: "mariam", parents: ["suad", "newHusband"] }
+        ],
+        colWidth: 230
+      });
+      return {
+        title: "مثال: البنت اللاحقة بعد الطلاق",
+        subtitle: "البنت التي وُلدت بعد زوال الزوجية ليست ربيبة لذلك الزوج",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("omar", "suad", { status: "temporary", label: "زواج سابق ثم طلاق", curve: -45 }),
+          edge("omar", "mariam", { status: "allowed", label: "ليست ربيبة" })
+        ]
+      };
+    }),
     scenario("العقد الفاسد والدخول", (condition) => ({
       title: "مسألة: النكاح غير الصحيح",
       subtitle: "العقد الفاسد بعد الدخول ينشر الحرمة، وقبل الدخول لا ينشرها",
@@ -601,29 +693,46 @@ const familyScenarios = {
         edge("man", "son", { status: condition ? "blocked" : "allowed", label: condition ? "ينتشر" : "لا ينتشر" })
       ]
     })),
-    scenario("شجرة موسعة: ثلاثة أجيال", () => ({
-      title: "أصول الزوج وفروع الزوجة",
-      subtitle: "تتبع: من يحرم على من في الجيل الأول والثاني",
-      toggle: null,
-      nodes: [
-        node("grand", "أبو سعيد\n(الجد)", 470, 95, "neutral", "الجد", "والد سعيد، وهو الأصل في هذا المثال.", { gender: "m" }),
-        node("saeed", "سعيد", 470, 270, "neutral", "الزوج/الابن", "سعيد ابن أبي سعيد، تزوج من هند.", { gender: "m" }),
-        node("hind", "هند\nزوجة سعيد", 700, 270, "blocked", "زوجة الابن للجد", "هند تحرم على أبي سعيد بمجرد العقد، فهي زوجة ابنه.", { gender: "f" }),
-        node("hindMother", "أم هند", 920, 195, "allowed", "أم زوجة الابن", "أم زوجة الابن لا تحرم على والد الابن، فيجوز لأبي سعيد التزوج منها.", { gender: "f" }),
-        node("hindDaughter", "بنت هند\nمن زوج آخر", 920, 365, "allowed", "بنت زوجة الابن", "بنت هند من زوج سابق ليست محرمة على أبي سعيد بهذا السبب.", { gender: "f" }),
-        node("rule", "أصول وفروع\nزوجة الابن\nغير محرمات", 470, 470, "neutral", "قاعدة المثال", "الذي يحرم على الجد هو زوجة ابنه فقط، لا أصولها ولا فروعها من غير ابنه.", { shape: "rule" })
-      ],
-      edges: [
-        edge("grand", "saeed", { label: "أب" }),
-        edge("saeed", "hind", { label: "زواج" }),
-        edge("hindMother", "hind", { label: "أم" }),
-        edge("hind", "hindDaughter", { label: "أم" }),
-        edge("grand", "hind", { status: "blocked", label: "زوجة الابن", curve: -60 }),
-        edge("grand", "hindMother", { status: "allowed", label: "يجوز", curve: -45 }),
-        edge("grand", "hindDaughter", { status: "allowed", label: "يجوز", curve: 45 }),
-        edge("rule", "grand", { label: "تطبيق" })
-      ]
-    }))
+    scenario("شجرة موسعة: ثلاثة أجيال", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("grand", "أبو سعيد\n(الجد)", 0, 0, "neutral", "الجد", "والد سعيد، وهو الأصل في هذا المثال.", { gender: "m" }),
+            node("hindMother", "أم هند", 0, 0, "allowed", "أم زوجة الابن", "أم زوجة الابن لا تحرم على والد الابن، فيجوز لأبي سعيد التزوج منها.", { gender: "f" })
+          ],
+          [
+            node("saeed", "سعيد", 0, 0, "neutral", "الزوج/الابن", "سعيد ابن أبي سعيد، تزوج من هند.", { gender: "m" }),
+            node("hind", "هند", 0, 0, "blocked", "زوجة الابن للجد", "هند تحرم على أبي سعيد بمجرد العقد، فهي زوجة ابنه.", { gender: "f" })
+          ],
+          [
+            node("hindDaughter", "بنت هند\nمن زوج آخر", 0, 0, "allowed", "بنت زوجة الابن", "بنت هند من زوج سابق ليست محرمة على أبي سعيد بهذا السبب.", { gender: "f" })
+          ]
+        ],
+        marriages: [["saeed", "hind"]],
+        parents: [
+          { id: "saeed", parents: ["grand"] },
+          { id: "hind", parents: ["hindMother"] },
+          { id: "hindDaughter", parents: ["hind"] }
+        ],
+        colWidth: 250
+      });
+      return {
+        title: "أصول الزوج وفروع الزوجة",
+        subtitle: "تتبع: من يحرم على من في الجيل الأول والثاني",
+        toggle: null,
+        nodes: [
+          ...built.nodes,
+          node("rule", "أصول وفروع\nزوجة الابن\nغير محرمات", 940, 480, "neutral", "قاعدة المثال", "الذي يحرم على الجد هو زوجة ابنه فقط، لا أصولها ولا فروعها من غير ابنه.", { shape: "rule" })
+        ],
+        edges: [
+          ...built.extraEdges,
+          edge("grand", "hind", { status: "blocked", label: "زوجة الابن", curve: -50 }),
+          edge("grand", "hindMother", { status: "allowed", label: "يجوز" }),
+          edge("grand", "hindDaughter", { status: "allowed", label: "يجوز", curve: -55 }),
+          edge("rule", "grand", { label: "تطبيق", curve: -30 })
+        ]
+      };
+    })
   ],
   radaa: [
     scenario("الخريطة العامة للرضاع", (condition) => ({
@@ -671,44 +780,63 @@ const familyScenarios = {
         edge("mahmoud", "girls", { status: "allowed", label: "يجوز", curve: 80 })
       ]
     })),
-    scenario("خالد، سعاد، سهام", () => ({
-      title: "مثال: زوجة الأب بالرضاع",
-      subtitle: "إذا صار خالد أباً لعمر بالرضاع، حرمت زوجته الأخرى",
-      toggle: null,
-      nodes: [
-        node("omar", "عمر", 470, 450, "neutral", "الرضيع", "عمر رضع من سعاد."),
-        node("suad", "سعاد", 250, 250, "blocked", "الأم بالرضاع", "سعاد صارت أم عمر بالرضاع."),
-        node("khaled", "خالد", 470, 250, "blocked", "الأب بالرضاع", "بسبب اللبن، خالد صار أباً لعمر بالرضاع."),
-        node("siham", "سهام", 700, 250, "blocked", "زوجة الأب بالرضاع", "سهام زوجة أخرى لخالد، فتصير زوجة أب عمر بالرضاع وتحرم عليه."),
-        node("rule", "مصاهرة\nبالرضاع", 470, 90, "neutral", "قاعدة المثال", "يحرم من الرضاع ما يحرم من المصاهرة.")
-      ],
-      edges: [
-        edge("suad", "omar", { label: "رضاع" }),
-        edge("suad", "khaled", { label: "سبب اللبن" }),
-        edge("khaled", "siham", { label: "زواج" }),
-        edge("omar", "suad", { status: "blocked", label: "أم رضاع", curve: -50 }),
-        edge("omar", "khaled", { status: "blocked", label: "أب رضاع", curve: 50 }),
-        edge("omar", "siham", { status: "blocked", label: "زوجة الأب", curve: -80 }),
-        edge("rule", "khaled", { label: "مصاهرة" })
-      ]
-    })),
-    scenario("سهام وختام", () => ({
-      title: "مثال: أم الزوجة بالرضاع",
-      subtitle: "من أرضعت الزوجة وهي صغيرة تصير أم زوجة بالرضاع",
-      toggle: null,
-      nodes: [
-        node("omar", "عمر", 470, 320, "neutral", "الزوج", "عمر تزوج سهام."),
-        node("siham", "سهام\nالزوجة", 470, 150, "neutral", "الزوجة", "سهام رضعت صغيرة من ختام."),
-        node("khitam", "ختام", 250, 150, "blocked", "أم الزوجة بالرضاع", "ختام تصبح أم زوجة عمر بالرضاع، فتحرم عليه مؤبداً."),
-        node("rule", "أم الزوجة\nبالرضاع", 700, 150, "blocked", "مصاهرة الرضاع", "أم الزوجة بالرضاع كأم الزوجة بالنسب في التحريم.")
-      ],
-      edges: [
-        edge("omar", "siham", { label: "زواج" }),
-        edge("khitam", "siham", { label: "أم رضاع" }),
-        edge("omar", "khitam", { status: "blocked", label: "أم الزوجة", curve: -65 }),
-        edge("khitam", "rule", { status: "blocked", label: "تحرم" })
-      ]
-    })),
+    scenario("خالد، سعاد، سهام", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("suad", "سعاد", 0, 0, "blocked", "الأم بالرضاع", "سعاد أرضعت عمر فصارت أمه بالرضاع.", { gender: "f" }),
+            node("khaled", "خالد", 0, 0, "blocked", "الأب بالرضاع", "خالد زوج سعاد ولديه زوجة أخرى سهام. اللبن سببه خالد.", { gender: "m" }),
+            node("siham", "سهام", 0, 0, "blocked", "زوجة أب عمر بالرضاع", "سهام زوجة أخرى لخالد، فتصير زوجة أب عمر بالرضاع وتحرم عليه.", { gender: "f" })
+          ],
+          [
+            node("omar", "عمر", 0, 0, "neutral", "الرضيع", "عمر رضع من سعاد، فصار خالد أباه بالرضاع.", { gender: "m" })
+          ]
+        ],
+        marriages: [["suad", "khaled"], ["khaled", "siham"]],
+        parents: [
+          { id: "omar", parents: ["suad", "khaled"] }
+        ],
+        colWidth: 230
+      });
+      return {
+        title: "مثال: زوجة الأب بالرضاع",
+        subtitle: "إذا صار خالد أباً لعمر بالرضاع، حرمت زوجته الأخرى سهام",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("omar", "siham", { status: "blocked", label: "زوجة الأب بالرضاع", curve: 70 })
+        ]
+      };
+    }),
+    scenario("سهام وختام", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("khitam", "ختام", 0, 0, "blocked", "أم الزوجة بالرضاع", "ختام أرضعت سهام صغيرة، فصارت أم زوجة عمر بالرضاع.", { gender: "f" })
+          ],
+          [
+            node("omar", "عمر", 0, 0, "neutral", "الزوج", "عمر تزوج سهام.", { gender: "m" }),
+            node("siham", "سهام", 0, 0, "neutral", "الزوجة", "سهام رضعت صغيرة من ختام، ثم تزوجها عمر.", { gender: "f" })
+          ]
+        ],
+        marriages: [["omar", "siham"]],
+        parents: [
+          { id: "siham", parents: ["khitam"] }
+        ],
+        colWidth: 240
+      });
+      return {
+        title: "مثال: أم الزوجة بالرضاع",
+        subtitle: "من أرضعت الزوجة وهي صغيرة تصير أم زوجة بالرضاع",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("omar", "khitam", { status: "blocked", label: "أم الزوجة بالرضاع", curve: 60 })
+        ]
+      };
+    }),
     scenario("أختي أرضعت بنتاً", () => ({
       title: "مثال: بنت الأخت بالرضاع",
       subtitle: "إذا أرضعت أختك بنتاً، تصير بنت أختك بالرضاع",
@@ -726,28 +854,37 @@ const familyScenarios = {
         edge("self", "role", { label: "خال" })
       ]
     })),
-    scenario("لبن الفحل: فوزي وسامية وخالدية", () => ({
-      title: "مثال: لبن الفحل",
-      subtitle: "اللبن ينسب للرجل الواحد ولو تعددت الزوجات المرضعات",
-      toggle: null,
-      nodes: [
-        node("omar", "عمر", 470, 455, "neutral", "عمر", "عمر ابن فوزي من سامية."),
-        node("fawzi", "فوزي", 470, 250, "blocked", "الأب وصاحب اللبن", "اللبن الذي أرضعت به خالدية كان سببه فوزي."),
-        node("samia", "سامية\nأم عمر", 250, 250, "neutral", "زوجة فوزي", "سامية أم عمر."),
-        node("khaldiya", "خالدية", 700, 250, "blocked", "المرضعة", "خالدية أرضعت انتصار بلبن سببه فوزي."),
-        node("intisar", "انتصار", 700, 90, "blocked", "أخت فوزي بالرضاع / عمة عمر بالرضاع", "انتصار صارت بنتاً لخالدية وفوزي بالرضاع، فتحرم على عمر لأنها عمته بالرضاع."),
-        node("rule", "ليست من\nنفس الثدي", 250, 90, "neutral", "النقطة الدقيقة", "مع أنها لم ترضع من سامية، تثبت الصلة عبر فوزي صاحب اللبن.")
-      ],
-      edges: [
-        edge("fawzi", "omar", { label: "أب" }),
-        edge("fawzi", "samia", { label: "زواج" }),
-        edge("fawzi", "khaldiya", { label: "زواج" }),
-        edge("khaldiya", "intisar", { label: "رضاع" }),
-        edge("fawzi", "intisar", { label: "لبن الفحل" }),
-        edge("omar", "intisar", { status: "blocked", label: "عمة رضاع", curve: 80 }),
-        edge("rule", "intisar", { label: "ليست من سامية" })
-      ]
-    })),
+    scenario("لبن الفحل: فوزي وسامية وخالدية", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("samia", "سامية", 0, 0, "neutral", "الزوجة الأولى", "سامية أرضعت عمر، فصارت أمه بالرضاع.", { gender: "f" }),
+            node("fawzi", "فوزي", 0, 0, "blocked", "صاحب اللبن", "فوزي زوج كل من سامية وخالدية. اللبن في الحالتين سببه فوزي.", { gender: "m" }),
+            node("khaldiya", "خالدية", 0, 0, "neutral", "الزوجة الثانية / المرضعة", "خالدية أرضعت انتصار. اللبن سببه فوزي (لبن الفحل).", { gender: "f" })
+          ],
+          [
+            node("omar", "عمر", 0, 0, "neutral", "ابن سامية", "عمر ابن سامية وفوزي بالنسب.", { gender: "m" }),
+            node("intisar", "انتصار", 0, 0, "blocked", "بنت خالدية وفوزي بالرضاع", "صارت بنتاً لخالدية بالرضاع وبنتاً لفوزي بلبن الفحل، فهي عمة عمر بالرضاع.", { gender: "f" })
+          ]
+        ],
+        marriages: [["samia", "fawzi"], ["fawzi", "khaldiya"]],
+        parents: [
+          { id: "omar", parents: ["samia", "fawzi"] },
+          { id: "intisar", parents: ["khaldiya", "fawzi"] }
+        ],
+        colWidth: 230
+      });
+      return {
+        title: "مثال: لبن الفحل",
+        subtitle: "اللبن ينسب للرجل الواحد ولو تعددت الزوجات المرضعات",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("omar", "intisar", { status: "blocked", label: "عمة بالرضاع (تحرم)", curve: 30 })
+        ]
+      };
+    }),
     scenario("لبن الهرمونات", () => ({
       title: "مثال: لبن بلا حمل",
       subtitle: "المرأة تصير أماً بالرضاع، لكن زوجها لا يصير أباً بالرضاع",
@@ -1054,33 +1191,51 @@ function drawFamily() {
   const sizeById = Object.fromEntries(data.nodes.map((item) => [item.id, nodeSize(item)]));
   const nodeRects = data.nodes.map((item) => ({ id: item.id, ...nodeBounds(item) }));
 
-  // Build edge geometry: auto-routed Bezier control points
+  // Build edge geometry. Marriage/parent edges are structural and use
+  // straight or L-shape paths anchored to the node edges (top/bottom),
+  // not the centers, so they look like real family-tree connectors.
   const edgeGeo = normalizedEdges.map((item) => {
     const a = nodesById[item.from];
     const b = nodesById[item.to];
+    if (item.kind === "marriage") {
+      // straight line at common Y between the two spouses (use centers; usually same row)
+      const c = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      return { a: { x: a.x, y: a.y }, b: { x: b.x, y: b.y }, c, kind: "marriage" };
+    }
+    if (item.kind === "parent") {
+      const sa = sizeById[a.id];
+      const sb = sizeById[b.id];
+      // Drop from parent's bottom to child's top
+      const aAnchor = { x: a.x, y: a.y + sa.h / 2 };
+      const bAnchor = { x: b.x, y: b.y - sb.h / 2 };
+      const c = { x: a.x, y: (aAnchor.y + bAnchor.y) / 2 };
+      return { a: aAnchor, b: bAnchor, c, kind: "parent" };
+    }
     const endpointIds = new Set([item.from, item.to]);
     const c = edgeControlPoint(a, b, item.curve, nodeRects, endpointIds);
-    return { a, b, c };
+    return { a, b, c, kind: item.kind || "verdict" };
   });
 
-  // Sample points along each edge curve as small obstacles, so labels don't sit on
-  // crossing edges. Each sample is tagged with its source edge index so we can
-  // exclude an edge's own samples when placing its own label.
+  // Sample points along each VERDICT edge curve as small obstacles for label
+  // placement. Marriage/parent edges are skipped — they're rigid scaffolding.
   const SAMPLE_RADIUS = 6;
-  const edgeSamplesByIndex = edgeGeo.map(({ a, c, b }) => {
+  const edgeSamplesByIndex = edgeGeo.map((g) => {
+    if (g.kind === "marriage" || g.kind === "parent") return [];
     const samples = [];
     for (let i = 1; i <= 9; i++) {
       const t = i / 10;
-      const p = bezierPoint(a, c, b, t);
+      const p = bezierPoint(g.a, g.c, g.b, t);
       samples.push({ x: p.x - SAMPLE_RADIUS, y: p.y - SAMPLE_RADIUS, w: SAMPLE_RADIUS * 2, h: SAMPLE_RADIUS * 2 });
     }
     return samples;
   });
 
   // Multi-pass label placement, considering all node rects + already-placed labels +
-  // foreign edge samples (so labels don't sit on top of crossing edges).
+  // foreign edge samples (so labels don't sit on top of crossing edges). Marriage
+  // and parent edges never carry labels — they're structural scaffolding.
   const placedLabels = [];
   const labelData = normalizedEdges.map((item, index) => {
+    if (item.kind === "marriage" || item.kind === "parent") return null;
     const status = item.status || "family";
     const labelText = status === "family" && item.kind !== "verdict" ? "" : item.label;
     if (!labelText) return null;
@@ -1102,11 +1257,29 @@ function drawFamily() {
   familySvg.setAttribute("viewBox", `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
   familySvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
-  // Render edges (curves first so nodes overlap them)
+  // Render edges (curves first so nodes overlap them).
+  // Marriage = straight line + small "زواج" glyph at midpoint.
+  // Parent = L-shape (down → across → down) for proper tree-drop.
+  // Verdict/relation = quadratic Bézier (existing behaviour).
   const edgesSvg = normalizedEdges.map((item, index) => {
-    const { a, b, c } = edgeGeo[index];
+    const geo = edgeGeo[index];
+    const { a, b, c } = geo;
     const status = item.status || "family";
-    const d = `M ${a.x} ${a.y} Q ${c.x} ${c.y}, ${b.x} ${b.y}`;
+    const kind = geo.kind || "verdict";
+    let d;
+    let extra = "";
+    if (kind === "marriage") {
+      d = `M ${a.x} ${a.y} L ${b.x} ${b.y}`;
+      // small "=" glyph as a marriage symbol at midpoint, rendered above the line
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      extra = `<g class="marriage-glyph"><rect x="${mx - 16}" y="${my - 12}" width="32" height="24" rx="6"></rect><text x="${mx}" y="${my + 1}">زواج</text></g>`;
+    } else if (kind === "parent") {
+      const midY = (a.y + b.y) / 2;
+      d = `M ${a.x} ${a.y} L ${a.x} ${midY} L ${b.x} ${midY} L ${b.x} ${b.y}`;
+    } else {
+      d = `M ${a.x} ${a.y} Q ${c.x} ${c.y}, ${b.x} ${b.y}`;
+    }
     const info = labelData[index];
     const label = info
       ? `<g class="edge-label ${status}">
@@ -1114,7 +1287,7 @@ function drawFamily() {
           <text x="${info.x}" y="${info.y + 1}">${info.text}</text>
         </g>`
       : "";
-    return `<g class="edge-group ${status}"><path class="edge ${status}" d="${d}" />${label}</g>`;
+    return `<g class="edge-group ${status} ${kind}"><path class="edge ${status} ${kind}" d="${d}" />${extra}${label}</g>`;
   }).join("");
 
   // Render nodes with adaptive sizing
