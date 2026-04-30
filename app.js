@@ -359,6 +359,16 @@ function genTree(spec) {
   const parentsOfChild = new Map();
   parents.forEach(({ id, parents: parentIds }) => parentsOfChild.set(id, parentIds));
 
+  // Track which nodes are part of any marriage so Pass B can leave couples
+  // anchored at their initial COL_W spacing (otherwise pulling one spouse
+  // toward an only-child collapses the gap and overlaps the marriage glyph).
+  const inMarriage = new Set();
+  marriages.forEach((m) => {
+    const [a, b] = Array.isArray(m) ? m : [m.from, m.to];
+    inMarriage.add(a);
+    inMarriage.add(b);
+  });
+
   // Pass A: children with 2 parents (couple) → place child at midpoint of parents
   parents.forEach(({ id, parents: parentIds }) => {
     if (parentIds.length === 2) {
@@ -368,12 +378,13 @@ function genTree(spec) {
   });
 
   // Pass B: bottom-up — each parent floats to the midpoint of its children's
-  // x-range, BUT only when all of those children have it as their sole parent
-  // (i.e., not in a couple with someone at a different x). This keeps
-  // marriages straight while letting hierarchy parents follow their leaves.
+  // x-range, BUT only when (a) all of those children have it as their sole
+  // parent AND (b) the node itself isn't a spouse in a marriage. Married
+  // parents keep their initial column so the marriage line stays clean.
   for (let pass = 0; pass < 2; pass++) {
     for (let gen = rows.length - 2; gen >= 0; gen--) {
       rows[gen].forEach((nodeSpec) => {
+        if (inMarriage.has(nodeSpec.id)) return;
         const cs = childrenOf.get(nodeSpec.id);
         if (!cs || cs.length === 0) return;
         const allSoleParent = cs.every((cid) => (parentsOfChild.get(cid) || []).length === 1);
@@ -1496,9 +1507,19 @@ function renderScenarioInto(svgEl, data, options = {}) {
     return samples;
   });
 
+  // Marriage glyphs ("زواج" pills, ~36×28) live in the middle of marriage edges.
+  // Add them to the obstacle list so verdict labels never land on top.
+  const marriageGlyphRects = edgeGeo
+    .filter((g) => g.kind === "marriage")
+    .map((g) => {
+      const mx = (g.a.x + g.b.x) / 2;
+      const my = (g.a.y + g.b.y) / 2;
+      return { x: mx - 20, y: my - 16, w: 40, h: 32 };
+    });
+
   // Multi-pass label placement, considering all node rects + already-placed labels +
-  // foreign edge samples (so labels don't sit on top of crossing edges). Marriage
-  // and parent edges never carry labels — they're structural scaffolding.
+  // foreign edge samples + marriage glyphs. Marriage and parent edges never
+  // carry labels — they're structural scaffolding.
   const placedLabels = [];
   const labelData = normalizedEdges.map((item, index) => {
     if (item.kind === "marriage" || item.kind === "parent") return null;
@@ -1508,7 +1529,7 @@ function renderScenarioInto(svgEl, data, options = {}) {
     const labelWidth = Math.max(72, labelText.length * (LABEL_FONT * 0.62) + LABEL_PAD_X * 2);
     const { a, b, c } = edgeGeo[index];
     const foreignEdgeSamples = edgeSamplesByIndex.flatMap((arr, j) => (j === index ? [] : arr));
-    const obstacles = [...nodeRects, ...placedLabels, ...foreignEdgeSamples];
+    const obstacles = [...nodeRects, ...placedLabels, ...foreignEdgeSamples, ...marriageGlyphRects];
     const placement = labelPlacement(item, a, c, b, labelWidth, obstacles);
     placedLabels.push(placement.rect);
     return { text: labelText, width: labelWidth, x: placement.x, y: placement.y, status };
