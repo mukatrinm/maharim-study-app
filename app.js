@@ -1198,6 +1198,330 @@ const familyScenarios = {
         edge("rule", "e10", { status: "allowed", label: "١٠ — لا تحرم" })
       ]
     })),
+    scenario("(١) أم الأخ من الرضاع", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("nurse", "المرضعة\n(أمك بالرضاع)", 0, 0, "blocked", "أمك بالرضاع", "أرضعتك صغيراً فصارت أمك بالرضاع، وهي محرمة عليك.", { gender: "f" }),
+            node("layla", "ليلى\nأم خالد بالنسب\n(يجوز)", 0, 0, "allowed", "أم الأخ بالرضاع — مستثنى", "ليلى أم خالد بالنسب فقط. ليست أمك بالنسب ولا بالرضاع — رضاعك من المرضعة لا منها. فهي أجنبية عنك ويجوز نكاحها.", { gender: "f" })
+          ],
+          [
+            node("self", "أنت", 0, 0, "neutral", "أنت", "رضعت من المرضعة. خالد رضع منها أيضاً.", { gender: "m" }),
+            node("khalid", "خالد\nأخوك\nبالرضاع", 0, 0, "blocked", "أخ بالرضاع", "خالد رضع من نفس المرضعة، فهو أخوك بالرضاع. أمه بالنسب (ليلى) لا تنتقل إليك.", { gender: "m" })
+          ]
+        ],
+        parents: [
+          { id: "khalid", parents: ["layla"] }
+        ],
+        colWidth: 240
+      });
+      return {
+        title: "مستثنى ١: أم الأخ من الرضاع",
+        subtitle: "بالنسب: أم أخيك = أمك (محرمة). بالرضاع: أم أخيك بالرضاع ≠ أمك → يجوز",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("nurse", "self", { label: "رضاع", status: "blocked" }),
+          edge("nurse", "khalid", { label: "رضاع", status: "blocked" }),
+          edge("self", "khalid", { status: "blocked", label: "أخوة بالرضاع", curve: 30 }),
+          edge("self", "layla", { status: "allowed", label: "يجوز (مستثنى)", curve: -65 })
+        ]
+      };
+    }),
+    scenario("(٢) أخت الابن من الرضاع", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("self", "أنت\n(أبو الابن)", 0, 0, "neutral", "الأب بالنسب", "أبو الابن بالنسب. ابنك رضع من امرأة أخرى.", { gender: "m" }),
+            node("nurse", "المرضعة\n(ليست زوجتك)", 0, 0, "blocked", "أم الابن بالرضاع", "امرأة أخرى أرضعت ابنك، فصارت أمه بالرضاع.", { gender: "f" })
+          ],
+          [
+            node("son", "ابنك", 0, 0, "blocked", "الابن", "ابنك بالنسب، رضع من المرضعة فصار ابنها بالرضاع أيضاً.", { gender: "m" }),
+            node("girl", "بنت المرضعة\n(يجوز)", 0, 0, "allowed", "أخت الابن بالرضاع — مستثنى", "بنت المرضعة من نسبها، صارت أخت ابنك بالرضاع. لكنها ليست بنتك — لم ترضع منك ولا من زوجتك.", { gender: "f" })
+          ]
+        ],
+        parents: [
+          { id: "son", parents: ["self"] },
+          { id: "girl", parents: ["nurse"] }
+        ],
+        colWidth: 250
+      });
+      return {
+        title: "مستثنى ٢: أخت الابن من الرضاع",
+        subtitle: "بالنسب: أخت ابنك = بنتك (محرمة). بالرضاع: أخت ابنك بالرضاع ليست بنتك → يجوز",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("nurse", "son", { label: "رضاع", status: "blocked" }),
+          edge("son", "girl", { label: "أخوة بالرضاع", status: "blocked" }),
+          edge("self", "girl", { status: "allowed", label: "يجوز (مستثنى)", curve: 50 })
+        ]
+      };
+    }),
+    scenario("(٣) جدة الابن بالرضاع", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("grandma", "أم المرضعة\n(يجوز)", 0, 0, "allowed", "جدة الابن بالرضاع — مستثنى", "أم المرضعة هي «جدة ابنك بالرضاع». لكنك لست ابنها ولا زوج بنتها بالنسب — أجنبية عنك تماماً.", { gender: "f" })
+          ],
+          [
+            node("self", "أنت\n(أبو الابن)", 0, 0, "neutral", "الأب بالنسب", "أبو الابن بالنسب فقط.", { gender: "m" }),
+            node("nurse", "المرضعة", 0, 0, "blocked", "أم الابن بالرضاع", "أرضعت ابنك فصارت أمه بالرضاع.", { gender: "f" })
+          ],
+          [
+            node("son", "ابنك", 0, 0, "blocked", "الابن", "بالنسب لك، وبالرضاع للمرضعة. وأم المرضعة جدته بالرضاع.", { gender: "m" })
+          ]
+        ],
+        parents: [
+          { id: "nurse", parents: ["grandma"] },
+          { id: "son", parents: ["self"] }
+        ],
+        colWidth: 240
+      });
+      return {
+        title: "مستثنى ٣: جدة الابن بالرضاع",
+        subtitle: "بالنسب: جدة ابنك = أمك أو أم زوجتك (محرمة). بالرضاع: لا صلة بينها وبينك → يجوز",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("nurse", "son", { label: "رضاع", status: "blocked" }),
+          edge("self", "grandma", { status: "allowed", label: "يجوز (مستثنى)", curve: -55 })
+        ]
+      };
+    }),
+    scenario("(٤) أم العم بالرضاع", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("nurse", "المرضعة\n(أرضعت أبي وخالد)", 0, 0, "blocked", "أم أبيك بالرضاع", "أرضعت أباك وخالداً معاً. هي جدتك بالرضاع.", { gender: "f" }),
+            node("layla", "ليلى\nأم خالد بالنسب\n(يجوز)", 0, 0, "allowed", "أم العم بالرضاع — مستثنى", "ليلى أم خالد بالنسب. ليست جدتك ولا أم أبيك — هي أم رجل صار عمك بالرضاع فقط.", { gender: "f" })
+          ],
+          [
+            node("father", "أبوك", 0, 0, "neutral", "الأب بالنسب", "أبوك بالنسب، رضع من المرضعة فصارت أمه بالرضاع.", { gender: "m" }),
+            node("khalid", "خالد\nعمك\nبالرضاع", 0, 0, "blocked", "العم بالرضاع", "خالد رضع من نفس المرضعة، فصار أخا أبيك بالرضاع، أي عمك بالرضاع.", { gender: "m" })
+          ],
+          [
+            node("self", "أنت", 0, 0, "neutral", "أنت", "ابن أبيك بالنسب.", { gender: "m" })
+          ]
+        ],
+        parents: [
+          { id: "khalid", parents: ["layla"] },
+          { id: "self", parents: ["father"] }
+        ],
+        colWidth: 240
+      });
+      return {
+        title: "مستثنى ٤: أم العم بالرضاع",
+        subtitle: "بالنسب: أم عمك = جدتك (محرمة). بالرضاع: أم العم بالرضاع لا تنتقل إليك → يجوز",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("nurse", "father", { label: "رضاع", status: "blocked" }),
+          edge("nurse", "khalid", { label: "رضاع", status: "blocked" }),
+          edge("father", "khalid", { status: "blocked", label: "أخوة بالرضاع" }),
+          edge("self", "layla", { status: "allowed", label: "يجوز (مستثنى)", curve: 70 })
+        ]
+      };
+    }),
+    scenario("(٥) أم الخال بالرضاع", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("nurse", "المرضعة\n(أرضعت أمي وخالد)", 0, 0, "blocked", "أم أمك بالرضاع", "أرضعت أمك وخالداً معاً. هي جدتك بالرضاع من جهة الأم.", { gender: "f" }),
+            node("layla", "ليلى\nأم خالد بالنسب\n(يجوز)", 0, 0, "allowed", "أم الخال بالرضاع — مستثنى", "ليلى أم خالد بالنسب. ليست جدتك ولا أم أمك — هي أم رجل صار خالك بالرضاع فقط.", { gender: "f" })
+          ],
+          [
+            node("mother", "أمك", 0, 0, "neutral", "الأم بالنسب", "أمك بالنسب، رضعت من المرضعة فصارت أمها بالرضاع.", { gender: "f" }),
+            node("khalid", "خالد\nخالك\nبالرضاع", 0, 0, "blocked", "الخال بالرضاع", "خالد رضع من نفس المرضعة، فصار أخا أمك بالرضاع، أي خالك بالرضاع.", { gender: "m" })
+          ],
+          [
+            node("self", "أنت", 0, 0, "neutral", "أنت", "ابن أمك بالنسب.", { gender: "m" })
+          ]
+        ],
+        parents: [
+          { id: "khalid", parents: ["layla"] },
+          { id: "self", parents: ["mother"] }
+        ],
+        colWidth: 240
+      });
+      return {
+        title: "مستثنى ٥: أم الخال بالرضاع",
+        subtitle: "بالنسب: أم خالك = جدتك (محرمة). بالرضاع: أم الخال بالرضاع لا تنتقل إليك → يجوز",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("nurse", "mother", { label: "رضاع", status: "blocked" }),
+          edge("nurse", "khalid", { label: "رضاع", status: "blocked" }),
+          edge("mother", "khalid", { status: "blocked", label: "أخوة بالرضاع" }),
+          edge("self", "layla", { status: "allowed", label: "يجوز (مستثنى)", curve: 70 })
+        ]
+      };
+    }),
+    scenario("(٦) عمة الابن بالرضاع", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("fahlMom", "أم الفحل", 0, 0, "neutral", "أم الفحل وأخته بالنسب", "أم الفحل وأخته. جدة ابنك بالرضاع، لكن لا صلة لها بك.", { gender: "f" }),
+            node("self", "أنت\n(أبو الابن\nبالنسب)", 0, 0, "neutral", "الأب بالنسب", "أبو الابن بالنسب فقط.", { gender: "m" })
+          ],
+          [
+            node("fahl", "الفحل\n(أبو الابن\nبالرضاع)", 0, 0, "blocked", "الأب بالرضاع للابن", "زوج المرضعة وصاحب اللبن. صار أبا ابنك بالرضاع.", { gender: "m" }),
+            node("aunt", "أخت الفحل\n(يجوز)", 0, 0, "allowed", "عمة الابن بالرضاع — مستثنى", "أخت الفحل بالنسب — هي عمة ابنك بالرضاع، لكنها ليست أختك ولا قريبة منك بأي وجه.", { gender: "f" }),
+            node("son", "ابنك", 0, 0, "blocked", "الابن", "بالنسب لك، وبالرضاع للفحل عبر مرضعته.", { gender: "m" })
+          ]
+        ],
+        parents: [
+          { id: "fahl", parents: ["fahlMom"] },
+          { id: "aunt", parents: ["fahlMom"] },
+          { id: "son", parents: ["self"] }
+        ],
+        colWidth: 240
+      });
+      return {
+        title: "مستثنى ٦: عمة الابن بالرضاع",
+        subtitle: "بالنسب: عمة ابنك = أختك (محرمة). بالرضاع: عمة ابنك بالرضاع لا تنتقل إليك → يجوز",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("fahl", "son", { label: "رضاع (لبن الفحل)", status: "blocked" }),
+          edge("self", "aunt", { status: "allowed", label: "يجوز (مستثنى)" })
+        ]
+      };
+    }),
+    scenario("(٧) بنت عمة الابن بالرضاع", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("fahl", "الفحل\n(أبو الابن\nبالرضاع)", 0, 0, "blocked", "الأب بالرضاع", "زوج المرضعة وصاحب اللبن.", { gender: "m" }),
+            node("aunt", "أخت الفحل\n(عمة الابن\nبالرضاع)", 0, 0, "blocked", "عمة الابن بالرضاع", "أخت الفحل بالنسب، عمة ابنك بالرضاع.", { gender: "f" }),
+            node("self", "أنت", 0, 0, "neutral", "الأب بالنسب", "أبو الابن بالنسب.", { gender: "m" })
+          ],
+          [
+            node("son", "ابنك", 0, 0, "blocked", "الابن", "بالنسب لك، وبالرضاع للفحل.", { gender: "m" }),
+            node("auntDaughter", "بنت عمة\nالابن (يجوز)", 0, 0, "allowed", "بنت عمة الابن بالرضاع — مستثنى", "بنت أخت الفحل — هي بنت عمة ابنك بالرضاع. أبعد من أن تتصل بك.", { gender: "f" })
+          ]
+        ],
+        parents: [
+          { id: "son", parents: ["self"] },
+          { id: "auntDaughter", parents: ["aunt"] }
+        ],
+        colWidth: 230
+      });
+      return {
+        title: "مستثنى ٧: بنت عمة الابن بالرضاع",
+        subtitle: "أبعد من المستثنى ٦ — يجوز بالأولى",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("fahl", "son", { label: "رضاع", status: "blocked" }),
+          edge("self", "auntDaughter", { status: "allowed", label: "يجوز (مستثنى)", curve: 70 })
+        ]
+      };
+    }),
+    scenario("(٨) بنت أخت الابن بالرضاع", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("nurse", "المرضعة\n(أم الابن\nبالرضاع)", 0, 0, "blocked", "أم الابن بالرضاع", "أرضعت ابنك.", { gender: "f" }),
+            node("self", "أنت\n(أبو الابن\nبالنسب)", 0, 0, "neutral", "الأب بالنسب", "أبو الابن بالنسب.", { gender: "m" })
+          ],
+          [
+            node("son", "ابنك", 0, 0, "blocked", "الابن", "بالنسب لك، وبالرضاع للمرضعة.", { gender: "m" }),
+            node("sis", "بنت المرضعة\n(أخت الابن\nبالرضاع)", 0, 0, "blocked", "أخت الابن بالرضاع", "بنت المرضعة بالنسب، صارت أخت ابنك بالرضاع.", { gender: "f" })
+          ],
+          [
+            node("girl", "بنت أخت\nالابن (يجوز)", 0, 0, "allowed", "بنت أخت الابن بالرضاع — مستثنى", "بنت [بنت المرضعة] — هي بنت أخت ابنك بالرضاع. أبعد من أن تتصل بك.", { gender: "f" })
+          ]
+        ],
+        parents: [
+          { id: "son", parents: ["self"] },
+          { id: "sis", parents: ["nurse"] },
+          { id: "girl", parents: ["sis"] }
+        ],
+        colWidth: 240
+      });
+      return {
+        title: "مستثنى ٨: بنت أخت الابن بالرضاع",
+        subtitle: "حفيدة المرضعة من ابنتها — لا صلة بينك وبينها → يجوز",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("nurse", "son", { label: "رضاع", status: "blocked" }),
+          edge("self", "girl", { status: "allowed", label: "يجوز (مستثنى)", curve: 60 })
+        ]
+      };
+    }),
+    scenario("(٩) أم زوجة الابن بالرضاع", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("inLawMom", "أم زوجة الابن\nبالرضاع\n(يجوز)", 0, 0, "allowed", "أم زوجة الابن بالرضاع — مستثنى", "هي المرأة التي أرضعت زوجة ابنك. ولأن أصول زوجة الابن لا تحرم على أصل الزوج (نفس قاعدة النسب) — يجوز نكاحها.", { gender: "f" })
+          ],
+          [
+            node("self", "أنت\n(أصل الزوج)", 0, 0, "neutral", "الأب", "أب الابن.", { gender: "m" }),
+            node("son", "ابنك", 0, 0, "neutral", "الابن", "ابنك بالنسب، تزوج امرأة.", { gender: "m" }),
+            node("wife", "زوجة الابن", 0, 0, "blocked", "زوجة الابن (محرمة عليك)", "محرمة عليك بمجرد عقد ابنك، لكن أمها بالنسب أو بالرضاع لا تحرم.", { gender: "f" })
+          ]
+        ],
+        marriages: [["son", "wife"]],
+        parents: [
+          { id: "son", parents: ["self"] }
+        ],
+        colWidth: 220
+      });
+      return {
+        title: "مستثنى ٩: أم زوجة الابن بالرضاع",
+        subtitle: "أصول زوجة الابن لا تحرم على أصل الزوج — لا في النسب ولا في الرضاع → يجوز",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("inLawMom", "wife", { label: "أرضعتها", status: "blocked" }),
+          edge("self", "inLawMom", { status: "allowed", label: "يجوز (مستثنى)", curve: -55 })
+        ]
+      };
+    }),
+    scenario("(١٠) أخت الأخ بالرضاع", () => {
+      const built = genTree({
+        rows: [
+          [
+            node("nurse", "المرضعة\n(أمك بالرضاع)", 0, 0, "blocked", "أمك بالرضاع", "أرضعتك أنت وخالد، فهي أمكما بالرضاع.", { gender: "f" }),
+            node("layla", "ليلى\nأم خالد وأخته\nبالنسب", 0, 0, "neutral", "أم خالد وليلى بالنسب", "أم خالد وأخته من نسبهما — لا صلة لها بك ولا بالمرضعة.", { gender: "f" })
+          ],
+          [
+            node("self", "أنت", 0, 0, "neutral", "أنت", "رضعت من المرضعة، فخالد أخوك بالرضاع.", { gender: "m" }),
+            node("khalid", "خالد\nأخوك\nبالرضاع", 0, 0, "blocked", "أخ بالرضاع", "خالد رضع أيضاً من المرضعة، فهو أخوك بالرضاع.", { gender: "m" }),
+            node("layla2", "ليلى الصغيرة\nأخت خالد بالنسب\n(يجوز)", 0, 0, "allowed", "أخت الأخ بالرضاع — مستثنى", "بنت أم خالد بالنسب — أخت خالد بالنسب فقط. لم ترضع من المرضعة، ولا أم لها صلة بك. أجنبية عنك → يجوز.", { gender: "f" })
+          ]
+        ],
+        parents: [
+          { id: "khalid", parents: ["layla"] },
+          { id: "layla2", parents: ["layla"] }
+        ],
+        colWidth: 230
+      });
+      return {
+        title: "مستثنى ١٠: أخت الأخ بالرضاع",
+        subtitle: "بالنسب: أخت أخيك = أختك (محرمة). بالرضاع: أخت أخيك بالرضاع لا صلة لها بك → يجوز",
+        toggle: null,
+        nodes: built.nodes,
+        edges: [
+          ...built.extraEdges,
+          edge("nurse", "self", { label: "رضاع", status: "blocked" }),
+          edge("nurse", "khalid", { label: "رضاع", status: "blocked" }),
+          edge("self", "khalid", { status: "blocked", label: "أخوة بالرضاع" }),
+          edge("self", "layla2", { status: "allowed", label: "يجوز (مستثنى)", curve: 70 })
+        ]
+      };
+    }),
     scenario("ما يحلّ للمرأة من الرضاع", () => ({
       title: "ما يحل للمرأة من الرضاع",
       subtitle: "ثمان حالات يجوز للمرأة فيها الزواج رغم الرضاع",
