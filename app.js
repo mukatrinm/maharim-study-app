@@ -163,6 +163,15 @@ function statusText(status) {
   return "عقدة توضيحية";
 }
 
+function escapeXml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 function renderMatrix(kind = "permanent") {
   matrix.innerHTML = topicSets[kind].map((item) => `
     <article class="topic-card">
@@ -189,8 +198,30 @@ function showView(view) {
   });
 }
 
-function node(id, label, x, y, status, title, detail) {
-  return { id, label, x, y, status, title, detail };
+// ─── Layout & rendering primitives ────────────────────────────────────────────
+const NODE_FONT = 15;
+const NODE_LINE = 19;
+const NODE_PAD_X = 18;
+const NODE_PAD_Y = 14;
+const NODE_MIN_W = 110;
+const NODE_MIN_H = 60;
+const LABEL_FONT = 12.5;
+const LABEL_PAD_X = 10;
+const LABEL_H = 26;
+
+function node(id, label, x, y, status, title, detail, options = {}) {
+  return {
+    id,
+    label,
+    x,
+    y,
+    status,
+    title,
+    detail,
+    gender: options.gender || null,    // "m" | "f" | null
+    shape: options.shape || "person",  // "person" | "concept" | "rule"
+    badge: options.badge || null       // small overlay text
+  };
 }
 
 function edge(from, to, options = {}) {
@@ -201,7 +232,8 @@ function edge(from, to, options = {}) {
     label: options.label || "",
     curve: options.curve || 0,
     labelDx: options.labelDx || 0,
-    labelDy: options.labelDy || 0
+    labelDy: options.labelDy || 0,
+    kind: options.kind || (options.status && options.status !== "family" ? "verdict" : "relation")
   };
 }
 
@@ -209,71 +241,124 @@ function scenario(label, build) {
   return { label, build };
 }
 
-function nodeBounds(item) {
-  if (item.id === "self") {
-    return { x: item.x - 82, y: item.y - 52, width: 164, height: 104 };
-  }
-  return { x: item.x - 72, y: item.y - 72, width: 144, height: 144 };
+// approximate char width for Arabic at NODE_FONT — empirically tuned
+function measureText(text, fontSize = NODE_FONT) {
+  const lines = String(text).split("\n");
+  const widest = lines.reduce((max, line) => Math.max(max, line.length), 0);
+  return {
+    w: widest * fontSize * 0.62,
+    h: lines.length * fontSize * 1.32,
+    lines: lines.length
+  };
 }
 
-function rectOverlapArea(a, b) {
-  const x = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
-  const y = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+function nodeSize(item) {
+  const m = measureText(item.label);
+  const isCenter = item.id === "self" || item.shape === "rule";
+  const padX = NODE_PAD_X + (item.gender ? 14 : 0);
+  return {
+    w: Math.max(isCenter ? NODE_MIN_W + 16 : NODE_MIN_W, m.w + padX * 2),
+    h: Math.max(NODE_MIN_H, m.h + NODE_PAD_Y * 2)
+  };
+}
+
+function nodeBounds(item) {
+  const s = nodeSize(item);
+  return { x: item.x - s.w / 2, y: item.y - s.h / 2, w: s.w, h: s.h };
+}
+
+function rectOverlap(a, b) {
+  const x = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+  const y = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
   return x * y;
 }
 
-function labelPlacement(edgeItem, geometry, labelWidth, blockedRects) {
-  const dx = geometry.b.x - geometry.a.x;
-  const dy = geometry.b.y - geometry.a.y;
-  const length = Math.hypot(dx, dy) || 1;
-  const along = { x: dx / length, y: dy / length };
-  const perpendicular = { x: -dy / length, y: dx / length };
-  const base = {
-    x: geometry.midX + (edgeItem.labelDx || 0),
-    y: geometry.midY + (edgeItem.labelDy || 0)
+function pointInRect(px, py, r, pad = 0) {
+  return px >= r.x - pad && px <= r.x + r.w + pad && py >= r.y - pad && py <= r.y + r.h + pad;
+}
+
+// Auto-route edge: if the straight line A→B intersects any non-endpoint node bbox,
+// shift the control point perpendicular to clear it.
+function edgeControlPoint(a, b, manualCurve, nodeRects, endpointIds) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const perp = { x: -dy / len, y: dx / len };
+  const midX = (a.x + b.x) / 2;
+  const midY = (a.y + b.y) / 2;
+  if (manualCurve) {
+    return { x: midX + perp.x * manualCurve, y: midY + perp.y * manualCurve };
+  }
+  // sample along the line; if any sample sits inside a non-endpoint node, shift
+  const samples = 14;
+  let blockedSide = 0;
+  for (let i = 1; i < samples; i++) {
+    const t = i / samples;
+    const px = a.x + dx * t;
+    const py = a.y + dy * t;
+    for (const r of nodeRects) {
+      if (endpointIds.has(r.id)) continue;
+      if (pointInRect(px, py, r, 4)) {
+        // signed perp distance from line midpoint to rect center → push to opposite side
+        const cx = r.x + r.w / 2;
+        const cy = r.y + r.h / 2;
+        const sign = Math.sign(perp.x * (cx - midX) + perp.y * (cy - midY)) || 1;
+        blockedSide -= sign;
+      }
+    }
+  }
+  if (blockedSide !== 0) {
+    const offset = Math.min(140, 60 + Math.abs(blockedSide) * 10);
+    const dir = Math.sign(blockedSide);
+    return { x: midX + perp.x * offset * dir, y: midY + perp.y * offset * dir };
+  }
+  return { x: midX, y: midY };
+}
+
+function bezierPoint(a, c, b, t) {
+  const u = 1 - t;
+  return {
+    x: u * u * a.x + 2 * u * t * c.x + t * t * b.x,
+    y: u * u * a.y + 2 * u * t * c.y + t * t * b.y
   };
-  const offsets = [
-    [0, 0],
-    [0, -54],
-    [0, 54],
-    [78, 0],
-    [-78, 0],
-    [78, -48],
-    [-78, -48],
-    [78, 48],
-    [-78, 48],
-    [0, -94],
-    [0, 94],
-    [125, 0],
-    [-125, 0],
-    [125, -64],
-    [-125, -64],
-    [125, 64],
-    [-125, 64],
-    [0, -135],
-    [0, 135],
-    [175, 0],
-    [-175, 0],
-    [175, -80],
-    [-175, -80],
-    [175, 80],
-    [-175, 80]
-  ];
+}
+
+function bezierTangent(a, c, b, t) {
+  const x = 2 * (1 - t) * (c.x - a.x) + 2 * t * (b.x - c.x);
+  const y = 2 * (1 - t) * (c.y - a.y) + 2 * t * (b.y - c.y);
+  const len = Math.hypot(x, y) || 1;
+  return { x: x / len, y: y / len };
+}
+
+// Multi-pass label placement: score candidate positions along the edge curve
+// across ts and perpendicular offsets, prefer near the midpoint with no overlap.
+function labelPlacement(edgeItem, a, c, b, labelWidth, blockedRects) {
+  const labelHeight = LABEL_H;
+  const ts = [0.5, 0.42, 0.58, 0.36, 0.64, 0.3, 0.7, 0.25, 0.75];
+  const perpOffsets = [0, 22, -22, 36, -36, 52, -52, 70, -70, 90, -90, 110, -110, 134, -134];
+  const manualDx = edgeItem.labelDx || 0;
+  const manualDy = edgeItem.labelDy || 0;
   let best = null;
 
-  for (const [parallel, normal] of offsets) {
-    const x = base.x + along.x * parallel + perpendicular.x * normal;
-    const y = base.y + along.y * parallel + perpendicular.y * normal;
-    const rect = { x: x - labelWidth / 2, y: y - 14, width: labelWidth, height: 28 };
-    const overlap = blockedRects.reduce((sum, blocked) => sum + rectOverlapArea(rect, blocked), 0);
-    const distance = Math.hypot(x - base.x, y - base.y);
-    const score = overlap * 1000 + distance;
-    if (!best || score < best.score) {
-      best = { x, y, rect, score };
+  for (const t of ts) {
+    const pt = bezierPoint(a, c, b, t);
+    const tan = bezierTangent(a, c, b, t);
+    const perp = { x: -tan.y, y: tan.x };
+    for (const off of perpOffsets) {
+      const cx = pt.x + perp.x * off + manualDx;
+      const cy = pt.y + perp.y * off + manualDy;
+      const rect = { x: cx - labelWidth / 2, y: cy - labelHeight / 2, w: labelWidth, h: labelHeight };
+      const overlap = blockedRects.reduce((sum, r) => sum + rectOverlap(rect, r), 0);
+      // prefer closer to midpoint t=0.5, prefer smaller perpendicular offset, heavily penalise overlap
+      const score = overlap * 4000 + Math.abs(t - 0.5) * 300 + Math.abs(off);
+      if (!best || score < best.score) {
+        best = { x: cx, y: cy, rect, score, overlap };
+      }
+      if (overlap === 0 && off === 0 && Math.abs(t - 0.5) < 0.05) {
+        return best;
+      }
     }
-    if (overlap === 0) break;
   }
-
   return best;
 }
 
@@ -760,84 +845,95 @@ function drawFamily() {
 
   const nodesById = Object.fromEntries(data.nodes.map((item) => [item.id, item]));
   const normalizedEdges = data.edges.map((edgeDef) => (
-    Array.isArray(edgeDef)
-      ? edge(edgeDef[0], edgeDef[1], edgeDef[2] || {})
-      : edgeDef
+    Array.isArray(edgeDef) ? edge(edgeDef[0], edgeDef[1], edgeDef[2] || {}) : edgeDef
   ));
-  const edgeGeometry = normalizedEdges.map((item) => {
+
+  // Cache adaptive sizes + bounds (so nodeBounds isn't recomputed)
+  const sizeById = Object.fromEntries(data.nodes.map((item) => [item.id, nodeSize(item)]));
+  const nodeRects = data.nodes.map((item) => ({ id: item.id, ...nodeBounds(item) }));
+
+  // Build edge geometry: auto-routed Bezier control points
+  const edgeGeo = normalizedEdges.map((item) => {
     const a = nodesById[item.from];
     const b = nodesById[item.to];
-    return {
-      a,
-      b,
-      x: (a.x + b.x) / 2 + (item.curve || 0),
-      y: (a.y + b.y) / 2,
-      midX: (a.x + b.x) / 2 + (item.curve || 0),
-      midY: (a.y + b.y) / 2
-    };
+    const endpointIds = new Set([item.from, item.to]);
+    const c = edgeControlPoint(a, b, item.curve, nodeRects, endpointIds);
+    return { a, b, c };
   });
-  const nodeRects = data.nodes.map(nodeBounds);
+
+  // Multi-pass label placement, considering all node rects + already-placed labels
   const placedLabels = [];
   const labelData = normalizedEdges.map((item, index) => {
     const status = item.status || "family";
-    const labelText = status === "family" ? "" : item.label;
+    const labelText = status === "family" && item.kind !== "verdict" ? "" : item.label;
     if (!labelText) return null;
-    const labelWidth = Math.min(150, Math.max(84, labelText.length * 9 + 28));
-    const placement = labelPlacement(item, edgeGeometry[index], labelWidth, [...nodeRects, ...placedLabels]);
+    const labelWidth = Math.max(72, labelText.length * (LABEL_FONT * 0.62) + LABEL_PAD_X * 2);
+    const { a, b, c } = edgeGeo[index];
+    const placement = labelPlacement(item, a, c, b, labelWidth, [...nodeRects, ...placedLabels]);
     placedLabels.push(placement.rect);
-    return { text: labelText, width: labelWidth, x: placement.x, y: placement.y, rect: placement.rect };
+    return { text: labelText, width: labelWidth, x: placement.x, y: placement.y, status };
   });
-  const boundsPoints = [
-    ...data.nodes.map((item) => ({ x: item.x, y: item.y })),
-    ...edgeGeometry.map((item) => ({ x: item.midX, y: item.midY })),
-    ...placedLabels.flatMap((item) => [
-      { x: item.x, y: item.y },
-      { x: item.x + item.width, y: item.y + item.height }
-    ])
-  ];
-  const minX = Math.min(...boundsPoints.map((item) => item.x)) - 100;
-  const maxX = Math.max(...boundsPoints.map((item) => item.x)) + 100;
-  const minY = Math.min(...boundsPoints.map((item) => item.y)) - 95;
-  const maxY = Math.max(...boundsPoints.map((item) => item.y)) + 95;
-  familySvg.setAttribute("viewBox", `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
 
-  const edges = normalizedEdges.map((item, index) => {
-    const a = nodesById[item.from];
-    const b = nodesById[item.to];
+  // Compute viewBox from node rects + label rects + edge control points
+  const allRects = [...nodeRects, ...placedLabels];
+  const minX = Math.min(...allRects.map((r) => r.x), ...edgeGeo.map((g) => g.c.x)) - 24;
+  const maxX = Math.max(...allRects.map((r) => r.x + r.w), ...edgeGeo.map((g) => g.c.x)) + 24;
+  const minY = Math.min(...allRects.map((r) => r.y), ...edgeGeo.map((g) => g.c.y)) - 24;
+  const maxY = Math.max(...allRects.map((r) => r.y + r.h), ...edgeGeo.map((g) => g.c.y)) + 24;
+  familySvg.setAttribute("viewBox", `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
+  familySvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+  // Render edges (curves first so nodes overlap them)
+  const edgesSvg = normalizedEdges.map((item, index) => {
+    const { a, b, c } = edgeGeo[index];
     const status = item.status || "family";
-    const { midX, midY } = edgeGeometry[index];
-    const d = `M ${a.x} ${a.y} Q ${midX} ${midY}, ${b.x} ${b.y}`;
-    const labelInfo = labelData[index];
-    const label = labelInfo
+    const d = `M ${a.x} ${a.y} Q ${c.x} ${c.y}, ${b.x} ${b.y}`;
+    const info = labelData[index];
+    const label = info
       ? `<g class="edge-label ${status}">
-          <rect x="${labelInfo.x - labelInfo.width / 2}" y="${labelInfo.y - 14}" width="${labelInfo.width}" height="28" rx="8"></rect>
-          <text x="${labelInfo.x}" y="${labelInfo.y + 1}">${labelInfo.text}</text>
+          <rect x="${info.x - info.width / 2}" y="${info.y - LABEL_H / 2}" width="${info.width}" height="${LABEL_H}" rx="9"></rect>
+          <text x="${info.x}" y="${info.y + 1}">${info.text}</text>
         </g>`
       : "";
-    return `<path class="edge ${status}" d="${d}" />${label}`;
+    return `<g class="edge-group ${status}"><path class="edge ${status}" d="${d}" />${label}</g>`;
   }).join("");
 
-  const nodes = data.nodes.map((item) => {
-    const text = item.label.split("\n").map((line, index, lines) => {
-      const dy = lines.length === 1 ? 0 : (index - (lines.length - 1) / 2) * 20;
-      return `<tspan x="${item.x}" y="${item.y + dy}">${line}</tspan>`;
-    }).join("");
-    const shape = item.id === "self"
-      ? `<rect x="${item.x - 64}" y="${item.y - 36}" width="128" height="72" rx="8"></rect>`
-      : `<circle cx="${item.x}" cy="${item.y}" r="58"></circle>`;
+  // Render nodes with adaptive sizing
+  const nodesSvg = data.nodes.map((item) => {
+    const s = sizeById[item.id];
+    const lines = item.label.split("\n");
+    const baseY = item.y - ((lines.length - 1) * NODE_LINE) / 2;
+    const tspans = lines.map((line, index) => `<tspan x="${item.x}" y="${baseY + index * NODE_LINE}">${escapeXml(line)}</tspan>`).join("");
+    // Person nodes: rounded-rectangle with subtle gender icon
+    const rx = s.h / 2;     // pill shape feel
+    const rectX = item.x - s.w / 2;
+    const rectY = item.y - s.h / 2;
+    const isCenter = item.id === "self" || item.shape === "rule";
+    const shape = `<rect x="${rectX}" y="${rectY}" width="${s.w}" height="${s.h}" rx="${isCenter ? 12 : Math.min(22, rx)}"></rect>`;
+    const genderIcon = item.gender
+      ? `<text class="gender-icon" x="${rectX + 14}" y="${rectY + 18}">${item.gender === "f" ? "♀" : "♂"}</text>`
+      : "";
+    const badge = item.badge
+      ? `<g class="node-badge"><rect x="${rectX + s.w / 2 - 30}" y="${rectY - 14}" width="60" height="22" rx="11"></rect><text x="${rectX + s.w / 2}" y="${rectY - 1}">${escapeXml(item.badge)}</text></g>`
+      : "";
     return `
-      <g class="node ${item.status}" data-node="${item.id}" tabindex="0" role="button" aria-label="${item.label.replace("\n", " ")}">
+      <g class="node ${item.status}${isCenter ? " is-center" : ""}" data-node="${item.id}" tabindex="0" role="button" aria-label="${escapeXml(item.label.replace(/\n/g, " "))}">
         ${shape}
-        <text>${text}</text>
+        ${genderIcon}
+        <text class="node-text">${tspans}</text>
+        ${badge}
       </g>
     `;
   }).join("");
 
-  familySvg.innerHTML = `${edges}${nodes}`;
+  familySvg.innerHTML = `${edgesSvg}${nodesSvg}`;
   familySvg.querySelectorAll(".node").forEach((el) => {
     el.addEventListener("click", () => showPerson(nodesById[el.dataset.node]));
     el.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") showPerson(nodesById[el.dataset.node]);
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        showPerson(nodesById[el.dataset.node]);
+      }
     });
   });
   showPerson(data.nodes[0]);

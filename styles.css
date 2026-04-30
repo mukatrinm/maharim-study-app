@@ -386,49 +386,75 @@ main {
 .node {
   cursor: pointer;
   outline: none;
+  transition: transform 200ms ease;
 }
 
-.node circle,
-.node rect {
+.node > rect {
   stroke-width: 2;
   stroke: rgba(31, 42, 46, 0.24);
   filter: drop-shadow(0 8px 10px rgba(31, 42, 46, 0.12));
+  transition: stroke-width 160ms ease, fill 220ms ease;
 }
 
-.node text {
+.node:hover > rect {
+  stroke-width: 3;
+  filter: drop-shadow(0 10px 14px rgba(31, 42, 46, 0.18));
+}
+
+.node.is-center > rect {
+  stroke-width: 3;
+}
+
+.node-text {
   fill: var(--ink);
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 800;
   pointer-events: none;
   text-anchor: middle;
   dominant-baseline: middle;
 }
 
-.node:focus-visible circle,
-.node:focus-visible rect {
+.gender-icon {
+  font-size: 18px;
+  fill: rgba(31, 42, 46, 0.45);
+  pointer-events: none;
+  font-weight: 700;
+}
+
+.node-badge rect {
+  fill: var(--ink);
+  stroke: none;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.18));
+}
+
+.node-badge text {
+  fill: white;
+  font-size: 11px;
+  font-weight: 800;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.node:focus-visible > rect {
   stroke-width: 4;
 }
 
-.node.blocked circle,
-.node.blocked rect {
+.node.blocked > rect {
   fill: var(--red-soft);
   stroke: var(--red);
 }
 
-.node.temporary circle,
-.node.temporary rect {
+.node.temporary > rect {
   fill: var(--amber-soft);
   stroke: var(--amber);
 }
 
-.node.allowed circle,
-.node.allowed rect {
+.node.allowed > rect {
   fill: var(--green-soft);
   stroke: var(--green);
 }
 
-.node.neutral circle,
-.node.neutral rect {
+.node.neutral > rect {
   fill: var(--blue-soft);
   stroke: var(--accent);
 }
