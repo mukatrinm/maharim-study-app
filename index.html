@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>المحرمات من النساء - تطبيق مذاكرة</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="course">أحوال شخصية</p>
+        <h1>المحرمات من النساء</h1>
+      </div>
+      <nav class="nav" aria-label="أقسام التطبيق">
+        <button class="nav-button active" data-view="map">الخريطة</button>
+        <button class="nav-button" data-view="lab">مختبر العائلة</button>
+        <button class="nav-button" data-view="rules">القواعد</button>
+        <button class="nav-button" data-view="quiz">اختبر نفسك</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="view active" id="map-view" aria-labelledby="map-title">
+        <div class="hero-grid">
+          <section class="hero-panel">
+            <div class="hero-copy">
+              <h2 id="map-title">افهم الباب كخريطة قرار</h2>
+              <p id="map-intro">
+                ابدأ بالسؤال: هل التحريم مؤبد أم مؤقت؟ ثم انزل إلى السبب:
+                نسب، مصاهرة، رضاع، أو سبب مؤقت يزول بزواله.
+              </p>
+            </div>
+            <div class="decision-rail" aria-label="خريطة قرار">
+              <button class="decision-node selected" data-map-topic="permanent">تأبيد</button>
+              <span class="rail-line"></span>
+              <button class="decision-node" data-map-topic="temporary">تأقيت</button>
+              <div class="decision-detail" id="decision-detail"></div>
+            </div>
+          </section>
+          <aside class="source-card">
+            <h3>المصادر المستخدمة</h3>
+            <p>ملخص المحاضرة في ملف DOCX، وصفحات 21-28 من كتيب أحكام الزواج بعد OCR للصفحات المصورة.</p>
+            <div class="legend">
+              <span><i class="dot blocked"></i>تحريم مؤبد</span>
+              <span><i class="dot temporary"></i>تحريم مؤقت</span>
+              <span><i class="dot allowed"></i>غير محرمة</span>
+            </div>
+          </aside>
+        </div>
+
+        <section class="matrix" id="topic-matrix"></section>
+      </section>
+
+      <section class="view" id="lab-view" aria-labelledby="lab-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="lab-title">مختبر العائلة</h2>
+            <p>غيّر السبب والشروط، ثم اضغط على أي شخص في الرسم لترى الحكم والسبب.</p>
+          </div>
+          <div class="segmented" role="tablist" aria-label="نوع العلاقة">
+            <button class="segment active" data-family="nasab">النسب</button>
+            <button class="segment" data-family="musaharah">المصاهرة</button>
+            <button class="segment" data-family="radaa">الرضاع</button>
+            <button class="segment" data-family="temporary">التأقيت</button>
+          </div>
+        </div>
+
+        <div class="lab-layout">
+          <section class="diagram-panel">
+            <div class="diagram-toolbar">
+              <div>
+                <strong id="diagram-title">محرمات النسب</strong>
+                <span id="diagram-subtitle">الأصول، الفروع، فروع الأبوين، العمات والخالات</span>
+              </div>
+              <div class="lab-tools">
+                <label class="example-picker">
+                  <span>المثال</span>
+                  <select id="example-select" aria-label="اختر مثالاً للرسم"></select>
+                </label>
+                <label class="toggle hidden" id="condition-toggle">
+                  <input type="checkbox" id="condition-input" checked />
+                  <span id="condition-label">حصل الدخول بالأم</span>
+                </label>
+              </div>
+            </div>
+            <svg id="family-svg" viewBox="0 0 940 560" role="img" aria-label="رسم علاقات العائلة"></svg>
+          </section>
+
+          <aside class="explain-panel" id="person-explain">
+            <p class="mini-title">اضغط على شخص في الرسم</p>
+            <h3>ابدأ من الشخص في الوسط</h3>
+            <p>العقدة المركزية تمثل الطالب أو الزوج في الأمثلة. الألوان تفرق بين التحريم المؤبد والمؤقت والجائز.</p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view" id="rules-view" aria-labelledby="rules-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="rules-title">القواعد الذهبية والأمثلة</h2>
+            <p>بطاقات سريعة للحفظ مع أمثلة من المحاضرة والكتيب.</p>
+          </div>
+          <button class="ghost-button" id="shuffle-rule">اعرض مثالاً آخر</button>
+        </div>
+        <div class="rules-grid" id="rules-grid"></div>
+        <section class="trainer">
+          <div>
+            <h3>مدرب الحكم السريع</h3>
+            <p>اختر علاقة وشروطها، ثم استخرج الحكم قبل الضغط على زر الفحص.</p>
+          </div>
+          <div class="trainer-controls">
+            <select id="case-select" aria-label="اختر مسألة">
+              <option value="wifeMother">أم الزوجة</option>
+              <option value="stepDaughter">بنت الزوجة من زوج سابق</option>
+              <option value="cousin">بنت العم أو بنت الخال</option>
+              <option value="sisterInLaw">أخت الزوجة</option>
+              <option value="milkSibling">أخت بالرضاع</option>
+            </select>
+            <label class="check-row">
+              <input type="checkbox" id="case-condition" checked />
+              <span id="case-condition-text">العقد صحيح</span>
+            </label>
+            <button class="primary-button" id="check-case">افحص الحكم</button>
+          </div>
+          <div class="case-result" id="case-result">اختر مسألة ثم اضغط افحص الحكم.</div>
+        </section>
+      </section>
+
+      <section class="view" id="quiz-view" aria-labelledby="quiz-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="quiz-title">اختبر نفسك</h2>
+            <p>أسئلة مبنية على النقاط التي يكثر فيها الخلط: بنت الزوجة، أصول زوجة الابن، لبن الفحل، والمستثنيات.</p>
+          </div>
+          <div class="score" id="score">0 / 0</div>
+        </div>
+        <div class="quiz-layout">
+          <section class="quiz-card" id="quiz-card"></section>
+          <aside class="flashcards">
+            <div class="flashcard" id="flashcard">
+              <p class="mini-title">بطاقة حفظ</p>
+              <h3 id="flash-front"></h3>
+              <p id="flash-back" class="hidden"></p>
+            </div>
+            <div class="flash-actions">
+              <button class="ghost-button" id="toggle-flash">أظهر الجواب</button>
+              <button class="ghost-button" id="next-flash">التالي</button>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
