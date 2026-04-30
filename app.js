@@ -35,42 +35,123 @@ const topicSets = {
   ]
 };
 
+// Each rule has a curated list of examples; each example points to a scenario in
+// familyScenarios via { family, scenario }. A scenario may appear under several
+// rules — the renderer auto-detects this and shows a "ضمن X قواعد" badge.
+// Scenarios not referenced by any rule are auto-rendered in a "أمثلة عامة" block.
 const rules = [
   {
+    id: "wife-mother",
     title: "العقد على البنات يحرّم الأمهات",
     body: "إذا عقد الرجل على امرأة عقداً صحيحاً حرمت عليه أمها وجداتها فوراً، سواء حصل دخول أم لا.",
-    example: "عبد الله تزوج ازدهار: لطيفة أم ازدهار محرمة على عبد الله بمجرد العقد.",
-    diagram: { family: "musaharah", label: "عبد الله، ازدهار، لطيفة" }
+    examples: [
+      { summary: "عبد الله تزوج ازدهار: لطيفة أم ازدهار محرمة على عبد الله بمجرد العقد.", scenario: { family: "musaharah", label: "عبد الله، ازدهار، لطيفة" } },
+      { summary: "الخريطة العامة للمصاهرة تُظهر القاعدة في سياقها مع الأصناف الأربعة.", scenario: { family: "musaharah", label: "الخريطة العامة للمصاهرة" } },
+      { summary: "الأصناف الأربعة هرمياً: الأمهات تحرم بمجرد العقد، والربائب بشرط الدخول.", scenario: { family: "musaharah", label: "الأصناف الأربعة (شجرة هرمية)" } }
+    ]
   },
   {
+    id: "consummation-stepdaughter",
     title: "الدخول بالأمهات يحرّم البنات",
-    body: "بنت الزوجة، وهي الربيبة، لا تحرم بمجرد العقد على أمها. لا تحرم إلا إذا دخل الزوج بالأم.",
-    example: "عمر عقد على سعاد ولها بنت تفاحة: إن دخل بسعاد حرمت تفاحة، وإن طلق قبل الدخول لم تحرم.",
-    diagram: { family: "musaharah", label: "عمر، سعاد، تفاحة" }
+    body: "بنت الزوجة (الربيبة) لا تحرم بمجرد العقد على أمها. لا تحرم إلا إذا دخل الزوج بالأم دخولاً حقيقياً، سواء بنكاح صحيح أم فاسد.",
+    examples: [
+      { summary: "عمر عقد على سعاد ولها بنت تفاحة: إن دخل بسعاد حرمت تفاحة، وإن طلق قبل الدخول لم تحرم.", scenario: { family: "musaharah", label: "عمر، سعاد، تفاحة" } },
+      { summary: "البنت اللاحقة بعد الطلاق: إن وُلدت بعد زوال الزوجية ليست ربيبة، فلا تحرم.", scenario: { family: "musaharah", label: "مريم: البنت اللاحقة" } },
+      { summary: "الخريطة العامة للمصاهرة — استخدم زر الدخول لرؤية الفرق.", scenario: { family: "musaharah", label: "الخريطة العامة للمصاهرة" } }
+    ]
   },
   {
-    title: "أصول زوجة الابن وفروعها ليست لأصل الزوج",
+    id: "son-wife-isolated",
+    title: "أصول زوجة الابن وفروعها ليست محرمات على أصل الزوج",
     body: "زوجة الابن تحرم على الأب، لكن أم زوجة الابن أو بنتها من غير الابن ليست محرمة على الأب بهذا السبب.",
-    example: "تحرم زوجة الابن على والد الابن، لكن أم زوجة الابن لا تحرم على والد الابن.",
-    diagram: { family: "musaharah", label: "أصول زوجة الابن وفروعها" }
+    examples: [
+      { summary: "زوجة الابن محرمة على الأب، لكن أمها وبنتها من غير ابنه غير محرمات.", scenario: { family: "musaharah", label: "أصول زوجة الابن وفروعها" } },
+      { summary: "شجرة موسعة عبر ثلاثة أجيال: أبو سعيد، سعيد، هند، أم هند، بنت هند.", scenario: { family: "musaharah", label: "شجرة موسعة: ثلاثة أجيال" } }
+    ]
   },
   {
-    title: "يحرم من الرضاع ما يحرم من النسب والمصاهرة",
-    body: "الأم بالرضاع، الأخت بالرضاع، زوجة الأب بالرضاع، وأم الزوجة بالرضاع تدخل في التحريم، مع المستثنيات المذكورة.",
-    example: "سهام رضعت من ختام، ثم تزوجها عمر: ختام تصبح أم زوجته بالرضاع فتحرم عليه.",
-    diagram: { family: "radaa", label: "سهام وختام" }
+    id: "fasid-marriage",
+    title: "العقد الفاسد قبل/بعد الدخول",
+    body: "العقد الفاسد بعد الدخول ينشر حرمة المصاهرة كالعقد الصحيح. أما قبل الدخول فلا ينشرها ولا يثبت توارث (قدري باشا مادة 135).",
+    examples: [
+      { summary: "إذا تزوج الفرع بعقد فاسد ودخل، حرمت المرأة على الأصل. وإن فارقها قبل الدخول جاز.", scenario: { family: "musaharah", label: "العقد الفاسد والدخول" } }
+    ]
   },
   {
-    title: "لبن الفحل",
-    body: "اللبن ينسب للمرضعة وللرجل الذي ثار اللبن بسببه. لذلك قد تثبت المحرمية بسبب الرجل الواحد ولو تعددت المرضعات.",
-    example: "إذا كان اللبن بسبب فوزي، فالرضيع يرتبط بفوزي رضاعاً، لا بالمرضعة وحدها.",
-    diagram: { family: "radaa", label: "لبن الفحل: فوزي وسامية وخالدية" }
+    id: "zina-musaharah",
+    title: "هل تثبت حرمة المصاهرة بالزنا؟",
+    body: "خلاف فقهي: الشافعية والمالكية لا تثبت، الحنفية تثبت. العمل القضائي عند سكوت قانون حقوق العائلة: يُؤخذ بقول الحنفية.",
+    examples: [
+      { summary: "بدّل بين المعتمد الحنفي والقول الآخر للمقارنة في انتشار الحرمة.", scenario: { family: "musaharah", label: "المصاهرة بالزنا" } }
+    ]
   },
   {
-    title: "يحتاط في الأبضاع ما لا يحتاط بغيرها",
-    body: "قبل الزواج يفتى بقول الحنفية احتياطاً في مقدار الرضاع. بعد الزواج قد يرشد الزوجان إلى قول الشافعية حفاظاً على الأسرة.",
-    example: "الحنفية يثبتون التحريم بقطرة، والشافعية بخمس رضعات متفرقات.",
-    diagram: { family: "radaa", label: "مقدار الرضاع والإفتاء" }
+    id: "radaa-mirrors-nasab",
+    title: "يحرم من الرضاع ما يحرم من النسب والمصاهرة — إلا ما استُثني",
+    body: "الأم والأخت وزوجة الأب وأم الزوجة بالرضاع كلها تدخل في التحريم. مع عشر مستثنيات لا تُحَرَّم رغم القياس.",
+    examples: [
+      { summary: "سهام رضعت من ختام، ثم تزوجها عمر: ختام تصبح أم زوجته بالرضاع فتحرم عليه.", scenario: { family: "radaa", label: "سهام وختام" } },
+      { summary: "خالد، سعاد، سهام: عمر رضع من سعاد فصارت سهام (الزوجة الأخرى لخالد) محرمة عليه.", scenario: { family: "radaa", label: "خالد، سعاد، سهام" } },
+      { summary: "أختي أرضعت بنتاً: تصير بنت أختك بالرضاع، وأنت خالها بالرضاع.", scenario: { family: "radaa", label: "أختي أرضعت بنتاً" } },
+      { summary: "الخريطة العامة للرضاع: المرضعة، أبو الرضيع، الأخوة، زوجة الأب، لبن الفحل، المستثنيات.", scenario: { family: "radaa", label: "الخريطة العامة للرضاع" } },
+      { summary: "عمر ومحمود: العبرة بمن رضع لا بإخوته، فأخ الرضيع نسباً ليس أخاً للمرضعة بالرضاع.", scenario: { family: "radaa", label: "عمر ومحمود وبنات المرضعة" } },
+      { summary: "المستثنيات العشر: حالات استُثنيت من القاعدة فلا تحرم.", scenario: { family: "radaa", label: "المستثنيات العشر (لا تحرم)" } }
+    ]
+  },
+  {
+    id: "fahl-milk",
+    title: "لبن الفحل: اللبن ينسب للرجل الذي ثار اللبن بسببه",
+    body: "اللبن يُنسب للمرضعة وللرجل الذي ثار اللبن بسببه. لذلك قد تثبت المحرمية بسبب الرجل الواحد ولو تعددت المرضعات.",
+    examples: [
+      { summary: "فوزي، سامية، خالدية: انتصار رضعت من خالدية لكن اللبن سببه فوزي، فصارت عمة لعمر بالرضاع.", scenario: { family: "radaa", label: "لبن الفحل: فوزي وسامية وخالدية" } },
+      { summary: "لبن بلا حمل: المرأة تصير أماً بالرضاع، لكن زوجها ليس أباً (لأن اللبن لم يكن بسببه).", scenario: { family: "radaa", label: "لبن الهرمونات" } }
+    ]
+  },
+  {
+    id: "ihtiyat-abda",
+    title: "يُحتاط في الأبضاع ما لا يُحتاط بغيرها",
+    body: "قبل الزواج يُفتى بقول الحنفية احتياطاً (ولو بقطرة). بعد الزواج يُرشد إلى قول الشافعية حفاظاً على الأسرة (خمس رضعات متفرقات).",
+    examples: [
+      { summary: "ابتداء الإفتاء بالحنفية، وبقاءً بالشافعية: «يغتفر في البقاء ما لا يغتفر في الابتداء».", scenario: { family: "radaa", label: "مقدار الرضاع والإفتاء" } },
+      { summary: "آثار التفريق بسبب الرضاع: قبل الدخول لا مهر ولا نفقة، بعده الأقل من المسمى ومن مهر المثل.", scenario: { family: "radaa", label: "آثار التفريق بسبب الرضاع" } }
+    ]
+  },
+  {
+    id: "temporary-rule",
+    title: "إذا زال المانع عاد الممنوع مباحاً",
+    body: "في التحريم المؤقت السبب مانع يزول. فإذا زالت العصمة أو انقضت العدة أو أسلمت غير الكتابية، عاد الزواج مباحاً.",
+    examples: [
+      { summary: "الخريطة العامة للتأقيت: زوجة الغير، المعتدة، الجمع، المطلقة 3، الخامسة، غير الكتابية.", scenario: { family: "temporary", label: "الخريطة العامة للتأقيت" } },
+      { summary: "زوجة العم/الخال: تأقيت لا نسب — تحرم ما دامت زوجة الغير.", scenario: { family: "temporary", label: "زوجة العم/الخال (تأقيت لا نسب)" } },
+      { summary: "النكاح غير الكتابية: تحرم حتى تُسلم أو يثبت وصف الكتابية.", scenario: { family: "temporary", label: "النكاح غير الكتابية" } }
+    ]
+  },
+  {
+    id: "no-combine",
+    title: "قاعدة الجمع: لو فُرضت إحداهما ذكراً حرم نكاحه من الأخرى",
+    body: "لا يجوز الجمع بين أختين، أو امرأة وعمتها أو خالتها أو ابنة أخيها أو أختها. تزول الحرمة بطلاق الأولى وانقضاء عدتها.",
+    examples: [
+      { summary: "الجمع بافتراض أحدهما ذكراً: مريم وخالتها أسماء — لو فُرضت أسماء ذكراً صار خالاً لمريم.", scenario: { family: "temporary", label: "الجمع: لو فُرضت ذكراً" } },
+      { summary: "أخت الزوجة: تحرم ما دامت أختها في عصمته أو عدتها.", scenario: { family: "temporary", label: "أخت الزوجة والجمع" } }
+    ]
+  },
+  {
+    id: "muhallil",
+    title: "المطلقة ثلاثاً وزواج التحليل",
+    body: "لا تحل المطلقة ثلاثاً للأول حتى تنكح غيره زواجاً صحيحاً، يحصل دخول حقيقي، ثم فراق، ثم انقضاء عدة — بلا اتفاق تحليل. وزواج التحليل محرم وملعون فاعله («التيس المستعار»).",
+    examples: [
+      { summary: "التيس المستعار: الفرق بين المحلِّل (محرم وملعون) والزوج الثاني الصحيح (يفتح طريق الرجوع).", scenario: { family: "temporary", label: "زواج التحليل: التيس المستعار" } },
+      { summary: "المطلقة ثلاثاً: تسلسل الشروط للرجوع للأول.", scenario: { family: "temporary", label: "المطلقة ثلاثاً" } }
+    ]
+  },
+  {
+    id: "judicial-default",
+    title: "العمل القضائي عند سكوت القانون",
+    body: "حيث سكت قانون حقوق العائلة عن مسألة، يُصار إلى المعتمد في مذهب الإمام أبي حنيفة (مثل: ثبوت حرمة المصاهرة بالزنا، ومقدار الرضاع المحرم).",
+    examples: [
+      { summary: "المصاهرة بالزنا: المعتمد قضائياً قول الحنفية عند سكوت القانون.", scenario: { family: "musaharah", label: "المصاهرة بالزنا" } },
+      { summary: "مقدار الرضاع: قضائياً قول الحنفية ابتداءً (احتياطاً).", scenario: { family: "radaa", label: "مقدار الرضاع والإفتاء" } }
+    ]
   }
 ];
 
@@ -1361,16 +1442,11 @@ function renderExampleOptions() {
   exampleSelect.value = String(activeExample);
 }
 
-function drawFamily() {
-  const data = familyData(activeFamily);
-  diagramTitle.textContent = data.title;
-  diagramSubtitle.textContent = data.subtitle;
-  if (data.toggle) {
-    conditionToggle.classList.remove("hidden");
-    conditionLabel.textContent = data.toggle.label;
-  } else {
-    conditionToggle.classList.add("hidden");
-  }
+// Pure renderer: paints a scenario into any SVG element. Returns helpers
+// (highlightNeighborhood, nodesById) so callers can wire interaction.
+function renderScenarioInto(svgEl, data, options = {}) {
+  const onNodeClick = options.onNodeClick || (() => {});
+  const interactive = options.interactive !== false;
 
   const nodesById = Object.fromEntries(data.nodes.map((item) => [item.id, item]));
   const normalizedEdges = data.edges.map((edgeDef) => (
@@ -1444,8 +1520,8 @@ function drawFamily() {
   const maxX = Math.max(...allRects.map((r) => r.x + r.w), ...edgeGeo.map((g) => g.c.x)) + 24;
   const minY = Math.min(...allRects.map((r) => r.y), ...edgeGeo.map((g) => g.c.y)) - 24;
   const maxY = Math.max(...allRects.map((r) => r.y + r.h), ...edgeGeo.map((g) => g.c.y)) + 24;
-  familySvg.setAttribute("viewBox", `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
-  familySvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  svgEl.setAttribute("viewBox", `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
+  svgEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
   // Render edges (curves first so nodes overlap them).
   // Marriage = straight line + small "زواج" glyph at midpoint.
@@ -1514,14 +1590,14 @@ function drawFamily() {
     `;
   }).join("");
 
-  familySvg.innerHTML = `${edgesSvg}${nodesSvg}`;
+  svgEl.innerHTML = `${edgesSvg}${nodesSvg}`;
 
-  const allNodeEls = familySvg.querySelectorAll(".node");
-  const allEdgeEls = familySvg.querySelectorAll(".edge-group");
+  const allNodeEls = svgEl.querySelectorAll(".node");
+  const allEdgeEls = svgEl.querySelectorAll(".edge-group");
 
   function highlightNeighborhood(focusId) {
     if (!focusId) {
-      familySvg.classList.remove("has-hover");
+      svgEl.classList.remove("has-hover");
       allNodeEls.forEach((el) => el.classList.remove("is-faded"));
       allEdgeEls.forEach((el) => el.classList.remove("is-faded"));
       return;
@@ -1531,7 +1607,7 @@ function drawFamily() {
       if (el.dataset.from === focusId) connectedIds.add(el.dataset.to);
       if (el.dataset.to === focusId) connectedIds.add(el.dataset.from);
     });
-    familySvg.classList.add("has-hover");
+    svgEl.classList.add("has-hover");
     allNodeEls.forEach((el) => el.classList.toggle("is-faded", !connectedIds.has(el.dataset.node)));
     allEdgeEls.forEach((el) => {
       const touched = el.dataset.from === focusId || el.dataset.to === focusId;
@@ -1539,20 +1615,45 @@ function drawFamily() {
     });
   }
 
-  allNodeEls.forEach((el) => {
-    el.addEventListener("click", () => showPerson(nodesById[el.dataset.node]));
-    el.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        showPerson(nodesById[el.dataset.node]);
-      }
+  if (interactive) {
+    allNodeEls.forEach((el) => {
+      el.addEventListener("click", () => onNodeClick(nodesById[el.dataset.node]));
+      el.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onNodeClick(nodesById[el.dataset.node]);
+        }
+      });
+      el.addEventListener("mouseenter", () => highlightNeighborhood(el.dataset.node));
+      el.addEventListener("mouseleave", () => highlightNeighborhood(null));
+      el.addEventListener("focus", () => highlightNeighborhood(el.dataset.node));
+      el.addEventListener("blur", () => highlightNeighborhood(null));
     });
-    el.addEventListener("mouseenter", () => highlightNeighborhood(el.dataset.node));
-    el.addEventListener("mouseleave", () => highlightNeighborhood(null));
-    el.addEventListener("focus", () => highlightNeighborhood(el.dataset.node));
-    el.addEventListener("blur", () => highlightNeighborhood(null));
-  });
+  }
+  return { nodesById, highlightNeighborhood };
+}
+
+function drawFamily() {
+  const data = familyData(activeFamily);
+  diagramTitle.textContent = data.title;
+  diagramSubtitle.textContent = data.subtitle;
+  if (data.toggle) {
+    conditionToggle.classList.remove("hidden");
+    conditionLabel.textContent = data.toggle.label;
+  } else {
+    conditionToggle.classList.add("hidden");
+  }
+  renderScenarioInto(familySvg, data, { onNodeClick: showPerson });
   showPerson(data.nodes[0]);
+}
+
+function renderScenarioByLabel(svgEl, family, label, condition = true) {
+  const list = familyScenarios[family];
+  if (!list) return;
+  const found = list.find((s) => s.label === label);
+  if (!found) return;
+  const data = found.build(condition);
+  renderScenarioInto(svgEl, data, { interactive: true, onNodeClick: () => {} });
 }
 
 function showPerson(item) {
@@ -1564,36 +1665,153 @@ function showPerson(item) {
   `;
 }
 
-function renderRules() {
-  document.querySelector("#rules-grid").innerHTML = rules.map((rule, index) => `
-    <article class="rule-card">
-      <strong>${rule.title}</strong>
-      <p>${rule.body}</p>
-      <div class="example">${rule.example}</div>
-      <button class="ghost-button visualize-button" data-rule-diagram="${index}">اعرض الرسم</button>
-    </article>
-  `).join("");
-  document.querySelectorAll("[data-rule-diagram]").forEach((button) => {
-    button.addEventListener("click", () => openRuleDiagram(Number(button.dataset.ruleDiagram)));
+// Build a reverse index from "family|label" → list of rule titles using it.
+// Used to flag cross-referenced examples in the rules view.
+function buildScenarioRuleIndex() {
+  const map = new Map();
+  rules.forEach((rule) => {
+    (rule.examples || []).forEach((ex) => {
+      const key = `${ex.scenario.family}|${ex.scenario.label}`;
+      if (!map.has(key)) map.set(key, []);
+      if (!map.get(key).some((r) => r.id === rule.id)) {
+        map.get(key).push({ id: rule.id, title: rule.title });
+      }
+    });
+  });
+  return map;
+}
+
+const familyLabel = {
+  nasab: "النسب",
+  musaharah: "المصاهرة",
+  radaa: "الرضاع",
+  temporary: "التأقيت"
+};
+
+function exampleSlug(family, label) {
+  return `${family}__${label}`.replace(/[^A-Za-z0-9_-]/g, (c) => `_${c.charCodeAt(0).toString(36)}_`);
+}
+
+function renderRuleExampleCard(example, ruleIndex, exampleIndex, scenarioRuleIndex) {
+  const { family, label } = example.scenario;
+  const slug = exampleSlug(family, label);
+  const idAttr = `ex-${ruleIndex}-${exampleIndex}-${slug}`;
+  const allRules = scenarioRuleIndex.get(`${family}|${label}`) || [];
+  const otherRules = allRules.filter((r, _, arr) => arr.length > 1 && r.id !== rules[ruleIndex]?.id);
+  const crossRef = otherRules.length
+    ? `<div class="cross-ref">يُستخدم أيضاً في: ${otherRules.map((r) => `<span class="cross-ref-pill">${escapeXml(r.title)}</span>`).join("")}</div>`
+    : "";
+  return `
+    <details class="example-card" id="${idAttr}" data-family="${escapeXml(family)}" data-label="${escapeXml(label)}">
+      <summary>
+        <span class="example-tag">${escapeXml(familyLabel[family] || family)}</span>
+        <span class="example-summary">${escapeXml(example.summary)}</span>
+        <span class="example-toggle">عرض الرسم</span>
+      </summary>
+      <div class="example-body">
+        <div class="example-meta">
+          <strong>${escapeXml(label)}</strong>
+          ${crossRef}
+        </div>
+        <svg class="inline-diagram" role="img" aria-label="${escapeXml(label)}"></svg>
+      </div>
+    </details>
+  `;
+}
+
+function renderStandaloneExample(family, label, scenarioRuleIndex) {
+  const slug = exampleSlug(family, label);
+  return `
+    <details class="example-card standalone" id="ex-orphan-${slug}" data-family="${escapeXml(family)}" data-label="${escapeXml(label)}">
+      <summary>
+        <span class="example-tag">${escapeXml(familyLabel[family] || family)}</span>
+        <span class="example-summary">${escapeXml(label)}</span>
+        <span class="example-toggle">عرض الرسم</span>
+      </summary>
+      <div class="example-body">
+        <svg class="inline-diagram" role="img" aria-label="${escapeXml(label)}"></svg>
+      </div>
+    </details>
+  `;
+}
+
+function bindExampleCards(container) {
+  container.querySelectorAll(".example-card").forEach((card) => {
+    let rendered = false;
+    const toggleEl = card.querySelector(".example-toggle");
+    const updateLabel = () => {
+      if (!toggleEl) return;
+      toggleEl.textContent = card.open ? "إخفاء الرسم" : "عرض الرسم";
+    };
+    updateLabel();
+    card.addEventListener("toggle", () => {
+      updateLabel();
+      if (!card.open || rendered) return;
+      const svg = card.querySelector(".inline-diagram");
+      if (!svg) return;
+      renderScenarioByLabel(svg, card.dataset.family, card.dataset.label, true);
+      rendered = true;
+    });
   });
 }
 
-function openRuleDiagram(index) {
-  const target = rules[index].diagram;
-  const scenarios = familyScenarios[target.family] || [];
-  const scenarioIndex = scenarios.findIndex((item) => item.label === target.label);
-  if (scenarioIndex === -1) return;
+function renderRules() {
+  const grid = document.querySelector("#rules-grid");
+  if (!grid) return;
+  const scenarioRuleIndex = buildScenarioRuleIndex();
 
-  showView("lab");
-  activeFamily = target.family;
-  activeExample = scenarioIndex;
-  conditionInput.checked = true;
-  document.querySelectorAll(".segment").forEach((segment) => {
-    segment.classList.toggle("active", segment.dataset.family === activeFamily);
+  // Track which scenarios are referenced by any rule
+  const referenced = new Set();
+  rules.forEach((rule) => (rule.examples || []).forEach((ex) => referenced.add(`${ex.scenario.family}|${ex.scenario.label}`)));
+
+  // Standalone scenarios: those NOT referenced by any rule. Skip generic
+  // overview maps so the standalone block shows only specific examples.
+  const skipLabels = new Set([
+    "الخريطة العامة للنسب",
+    "نظير المرأة (الذكور المحرّمون)",
+    "العمات والخالات وبناتهن",
+    "الأخت الشقيقة ولأب ولأم",
+    "الأصناف الأربعة (شجرة هرمية)",
+    "الخريطة العامة للمصاهرة",
+    "الخريطة العامة للرضاع",
+    "الخريطة العامة للتأقيت"
+  ]);
+  const standalone = [];
+  Object.keys(familyScenarios).forEach((family) => {
+    familyScenarios[family].forEach((s) => {
+      const key = `${family}|${s.label}`;
+      if (!referenced.has(key) && !skipLabels.has(s.label)) {
+        standalone.push({ family, label: s.label });
+      }
+    });
   });
-  renderExampleOptions();
-  drawFamily();
-  document.querySelector("#lab-view").scrollIntoView({ behavior: "smooth", block: "start" });
+
+  grid.innerHTML = `
+    ${rules.map((rule, ruleIndex) => `
+      <article class="rule-card" data-rule-id="${escapeXml(rule.id)}">
+        <header class="rule-header">
+          <strong>${escapeXml(rule.title)}</strong>
+          <p>${escapeXml(rule.body)}</p>
+        </header>
+        <div class="rule-examples">
+          ${(rule.examples || []).map((ex, exIndex) => renderRuleExampleCard(ex, ruleIndex, exIndex, scenarioRuleIndex)).join("")}
+        </div>
+      </article>
+    `).join("")}
+    ${standalone.length ? `
+      <article class="rule-card standalone-block">
+        <header class="rule-header">
+          <strong>أمثلة عامة (لا تنتمي لقاعدة واحدة)</strong>
+          <p>سيناريوهات إضافية مفيدة للمراجعة، اضغط على أي مثال لرؤية الرسم.</p>
+        </header>
+        <div class="rule-examples">
+          ${standalone.map(({ family, label }) => renderStandaloneExample(family, label, scenarioRuleIndex)).join("")}
+        </div>
+      </article>
+    ` : ""}
+  `;
+
+  bindExampleCards(grid);
 }
 
 const caseDefinitions = {
@@ -1895,11 +2113,6 @@ conditionInput.addEventListener("change", () => {
     drawFamily();
     requestAnimationFrame(() => familySvg.classList.remove("is-rerendering"));
   });
-});
-document.querySelector("#shuffle-rule").addEventListener("click", () => {
-  const grid = document.querySelector("#rules-grid");
-  const first = grid.firstElementChild;
-  if (first) grid.append(first);
 });
 document.querySelector("#case-select").addEventListener("change", updateCaseCondition);
 document.querySelector("#check-case").addEventListener("click", checkCase);
