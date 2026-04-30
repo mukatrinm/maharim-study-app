@@ -436,6 +436,30 @@ const familyScenarios = {
         edge("self", "paternal", { status: "blocked", label: "أخت لأب", curve: 55 }),
         edge("self", "maternal", { status: "blocked", label: "أخت لأم", curve: -55 })
       ]
+    })),
+    scenario("نظير المرأة (الذكور المحرّمون)", () => ({
+      title: "نظير المرأة في النسب",
+      subtitle: "يحرم على المرأة من الرجال نظير ما يحرم على الرجل من النساء",
+      toggle: null,
+      nodes: [
+        node("self", "أنتِ", 470, 290, "neutral", "محور المثال", "نظير ما يحرم على الرجل بالنسب من النساء، يحرم على المرأة من الرجال.", { gender: "f" }),
+        node("father", "الأب\nوإن علا", 470, 110, "blocked", "الأب والأجداد", "أبوكِ وأجدادكِ من جهة الأب أو الأم.", { gender: "m" }),
+        node("son", "الابن\nوإن نزل", 470, 470, "blocked", "الأبناء والأحفاد", "ابنكِ وابن ابنكِ وابن بنتكِ وإن نزلوا.", { gender: "m" }),
+        node("brother", "الإخوة", 220, 290, "blocked", "الإخوة مطلقاً", "الأخ الشقيق، لأب، أو لأم.", { gender: "m" }),
+        node("uncle", "العم\nوالخال", 720, 200, "blocked", "العم والخال", "أعمامكِ وأخوالكِ، وأعمام/أخوال أصولكِ.", { gender: "m" }),
+        node("nephew", "ابن الأخ\nأو الأخت", 720, 380, "blocked", "أبناء الإخوة والأخوات", "ابن أخيكِ وابن أختكِ وإن نزلوا.", { gender: "m" }),
+        node("cousin", "ابن العم\nأو الخال", 220, 470, "allowed", "غير محرم بالنسب", "أبناء العم والعمة والخال والخالة ليسوا محرمين بالنسب.", { gender: "m" })
+      ],
+      edges: [
+        edge("father", "self", { label: "أب" }),
+        edge("self", "son", { label: "أم" }),
+        edge("self", "father", { status: "blocked", label: "أب محرم", curve: -55 }),
+        edge("self", "son", { status: "blocked", label: "ابن محرم", curve: 55 }),
+        edge("self", "brother", { status: "blocked", label: "أخ محرم", curve: 30 }),
+        edge("self", "uncle", { status: "blocked", label: "عم/خال", curve: -45 }),
+        edge("self", "nephew", { status: "blocked", label: "ابن الأخ", curve: 45 }),
+        edge("self", "cousin", { status: "allowed", label: "يجوز", curve: -45 })
+      ]
     }))
   ],
   musaharah: [
@@ -575,6 +599,29 @@ const familyScenarios = {
         edge("man", "mother", { status: condition ? "blocked" : "allowed", label: condition ? "تحرم" : "لا تحرم", curve: -60 }),
         edge("man", "daughter", { status: condition ? "blocked" : "allowed", label: condition ? "تحرم" : "لا تحرم", curve: 60 }),
         edge("man", "son", { status: condition ? "blocked" : "allowed", label: condition ? "ينتشر" : "لا ينتشر" })
+      ]
+    })),
+    scenario("شجرة موسعة: ثلاثة أجيال", () => ({
+      title: "أصول الزوج وفروع الزوجة",
+      subtitle: "تتبع: من يحرم على من في الجيل الأول والثاني",
+      toggle: null,
+      nodes: [
+        node("grand", "أبو سعيد\n(الجد)", 470, 95, "neutral", "الجد", "والد سعيد، وهو الأصل في هذا المثال.", { gender: "m" }),
+        node("saeed", "سعيد", 470, 270, "neutral", "الزوج/الابن", "سعيد ابن أبي سعيد، تزوج من هند.", { gender: "m" }),
+        node("hind", "هند\nزوجة سعيد", 700, 270, "blocked", "زوجة الابن للجد", "هند تحرم على أبي سعيد بمجرد العقد، فهي زوجة ابنه.", { gender: "f" }),
+        node("hindMother", "أم هند", 920, 195, "allowed", "أم زوجة الابن", "أم زوجة الابن لا تحرم على والد الابن، فيجوز لأبي سعيد التزوج منها.", { gender: "f" }),
+        node("hindDaughter", "بنت هند\nمن زوج آخر", 920, 365, "allowed", "بنت زوجة الابن", "بنت هند من زوج سابق ليست محرمة على أبي سعيد بهذا السبب.", { gender: "f" }),
+        node("rule", "أصول وفروع\nزوجة الابن\nغير محرمات", 470, 470, "neutral", "قاعدة المثال", "الذي يحرم على الجد هو زوجة ابنه فقط، لا أصولها ولا فروعها من غير ابنه.", { shape: "rule" })
+      ],
+      edges: [
+        edge("grand", "saeed", { label: "أب" }),
+        edge("saeed", "hind", { label: "زواج" }),
+        edge("hindMother", "hind", { label: "أم" }),
+        edge("hind", "hindDaughter", { label: "أم" }),
+        edge("grand", "hind", { status: "blocked", label: "زوجة الابن", curve: -60 }),
+        edge("grand", "hindMother", { status: "allowed", label: "يجوز", curve: -45 }),
+        edge("grand", "hindDaughter", { status: "allowed", label: "يجوز", curve: 45 }),
+        edge("rule", "grand", { label: "تطبيق" })
       ]
     }))
   ],
@@ -739,6 +786,82 @@ const familyScenarios = {
         edge("hanafi", "before", { status: "blocked", label: "ابتداءً" }),
         edge("shafii", "after", { label: "بقاءً" })
       ]
+    })),
+    scenario("المستثنيات العشر (لا تحرم)", () => ({
+      title: "المستثنيات العشر في الرضاع",
+      subtitle: "حالات استُثنيت من قاعدة (يحرم بالرضاع ما يحرم بالنسب)",
+      toggle: null,
+      nodes: [
+        node("rule", "القاعدة:\nيحرم بالرضاع\nما يحرم بالنسب\nإلا ما استُثني", 470, 290, "neutral", "القاعدة الأم", "قاعدة باب الرضاع، ولها مستثنيات عشر لا تحرم.", { shape: "rule" }),
+        node("e1", "أم الأخ\nوأم الأخت\nبالرضاع", 200, 110, "allowed", "1) أم الأخ بالرضاع", "أم أخيك من الرضاع لا تكون أمك، فلا تحرم عليك من جهة الرضاع."),
+        node("e2", "أخت الابن\nوأخت البنت\nبالرضاع", 470, 90, "allowed", "2) أخت الابن بالرضاع", "أخت ابنك بالرضاع ليست بنتك بالرضاع، فلا تحرم عليك."),
+        node("e3", "جدة الابن\nأو البنت\nبالرضاع", 740, 110, "allowed", "3) جدة الابن بالرضاع", "جدة ابنك بالرضاع لا تأخذ حكم أمك."),
+        node("e4", "أم العم\nوأم العمة\nبالرضاع", 920, 290, "allowed", "4) أم العم بالرضاع", "أم عمك بالرضاع لا تحرم عليك."),
+        node("e5", "أم الخال\nوأم الخالة\nبالرضاع", 740, 470, "allowed", "5) أم الخال بالرضاع", "أم خالك بالرضاع لا تحرم عليك."),
+        node("e6", "عمة الابن\nأو البنت\nبالرضاع", 470, 490, "allowed", "6) عمة الابن بالرضاع", "عمة ابنك بالرضاع لا تكون أختك بالرضاع."),
+        node("e7", "بنت عمة\nالابن أو\nالبنت", 200, 470, "allowed", "7) بنت عمة الابن بالرضاع", "بنت عمة ابنك بالرضاع لا تحرم."),
+        node("e8", "بنت أخت\nالابن أو\nالبنت", 20, 290, "allowed", "8) بنت أخت الابن بالرضاع", "بنت أخت ابنك بالرضاع لا تحرم."),
+        node("e9", "أم أم ولد\nالابن أو\nالبنت", 200, 290, "allowed", "9) أم أم ولد الابن بالرضاع", "أم أم ولد ابنك بالرضاع لا تحرم."),
+        node("e10", "أخت الأخ\nأو الأخت\nبالرضاع", 740, 290, "allowed", "10) أخت الأخ بالرضاع", "أخت أخيك بالرضاع، إذا كانت من جهة أخرى، لا تحرم.")
+      ],
+      edges: [
+        edge("rule", "e1", { status: "allowed", label: "١ — لا تحرم" }),
+        edge("rule", "e2", { status: "allowed", label: "٢ — لا تحرم" }),
+        edge("rule", "e3", { status: "allowed", label: "٣ — لا تحرم" }),
+        edge("rule", "e4", { status: "allowed", label: "٤ — لا تحرم" }),
+        edge("rule", "e5", { status: "allowed", label: "٥ — لا تحرم" }),
+        edge("rule", "e6", { status: "allowed", label: "٦ — لا تحرم" }),
+        edge("rule", "e7", { status: "allowed", label: "٧ — لا تحرم" }),
+        edge("rule", "e8", { status: "allowed", label: "٨ — لا تحرم" }),
+        edge("rule", "e9", { status: "allowed", label: "٩ — لا تحرم" }),
+        edge("rule", "e10", { status: "allowed", label: "١٠ — لا تحرم" })
+      ]
+    })),
+    scenario("ما يحلّ للمرأة من الرضاع", () => ({
+      title: "ما يحل للمرأة من الرضاع",
+      subtitle: "ثمان حالات يجوز للمرأة فيها الزواج رغم الرضاع",
+      toggle: null,
+      nodes: [
+        node("self", "المرأة", 470, 290, "neutral", "محور المثال", "هذه الحالات يحل للمرأة بالرضاع، فلا يقاس فيها على النسب.", { gender: "f", shape: "rule" }),
+        node("a1", "أبو أخيها\nبالرضاع", 230, 110, "allowed", "1) أبو أخيها بالرضاع", "أبو أخيك بالرضاع ليس أباك، فيجوز.", { gender: "m" }),
+        node("a2", "أخو ابنها\nبالرضاع", 470, 90, "allowed", "2) أخو ابنها بالرضاع", "أخو ابنك بالرضاع ليس ابنك، فيجوز.", { gender: "m" }),
+        node("a3", "جد ابنها\nبالرضاع", 720, 110, "allowed", "3) جد ابنها بالرضاع", "جد ابنك بالرضاع ليس أباك ولا جدك، فيجوز.", { gender: "m" }),
+        node("a4", "أبو عمها\nبالرضاع", 900, 290, "allowed", "4) أبو عمها بالرضاع", "أبو عمك بالرضاع ليس جدك من جهة الرضاع.", { gender: "m" }),
+        node("a5", "أبو خالها\nبالرضاع", 720, 470, "allowed", "5) أبو خالها بالرضاع", "أبو خالك بالرضاع ليس جدك من أمك بالرضاع.", { gender: "m" }),
+        node("a6", "خال ولدها\nبالرضاع", 470, 490, "allowed", "6) خال ولدها بالرضاع", "خال ولدك بالرضاع ليس أخاك بالرضاع.", { gender: "m" }),
+        node("a7", "ابن خالة\nولدها", 230, 470, "allowed", "7) ابن خالة ولدها بالرضاع", "ابن خالة ولدك بالرضاع ليس ابن خالتك.", { gender: "m" }),
+        node("a8", "ابن أخت\nولدها", 50, 290, "allowed", "8) ابن أخت ولدها بالرضاع", "ابن أخت ولدك بالرضاع لا يأخذ حكم ابن أختك.", { gender: "m" })
+      ],
+      edges: [
+        edge("self", "a1", { status: "allowed", label: "يجوز", curve: -25 }),
+        edge("self", "a2", { status: "allowed", label: "يجوز", curve: 0 }),
+        edge("self", "a3", { status: "allowed", label: "يجوز", curve: 25 }),
+        edge("self", "a4", { status: "allowed", label: "يجوز", curve: 0 }),
+        edge("self", "a5", { status: "allowed", label: "يجوز", curve: 25 }),
+        edge("self", "a6", { status: "allowed", label: "يجوز", curve: 0 }),
+        edge("self", "a7", { status: "allowed", label: "يجوز", curve: -25 }),
+        edge("self", "a8", { status: "allowed", label: "يجوز", curve: 0 })
+      ]
+    })),
+    scenario("آثار التفريق بسبب الرضاع", () => ({
+      title: "أثر اكتشاف الرضاع بعد العقد",
+      subtitle: "يفرّق القاضي، وتختلف الآثار قبل الدخول وبعده",
+      toggle: null,
+      nodes: [
+        node("case", "اكتُشف\nالرضاع المحرّم", 470, 110, "blocked", "مدخل المسألة", "بعد العقد ثبت أن الزوجين أخوان أو أم/ابن... بالرضاع.", { shape: "rule" }),
+        node("split", "يفرّق\nالقاضي", 470, 290, "blocked", "حكم القضاء", "لا بد من التفريق لأنهم محارم، ولا يستمر العقد.", { shape: "rule" }),
+        node("before", "قبل الدخول", 230, 470, "neutral", "قبل الدخول", "إذا لم يحصل دخول حقيقي.", { shape: "rule" }),
+        node("after", "بعد الدخول", 720, 470, "neutral", "بعد الدخول", "إذا حصل دخول حقيقي.", { shape: "rule" }),
+        node("beforeOut", "لا مهر،\nلا نفقة،\nلا سكنى", 230, 640, "allowed", "النتيجة قبل الدخول", "لا تستحق المرأة شيئاً من الحقوق المالية.", { shape: "rule" }),
+        node("afterOut", "الأقل من\nالمسمّى\nومهر المثل\n(لا نفقة\nلا سكنى)", 720, 670, "amber", "النتيجة بعد الدخول", "تستحق الأقل من المهر المسمى ومهر المثل، ولا نفقة ولا سكنى.", { shape: "rule" })
+      ],
+      edges: [
+        edge("case", "split", { status: "blocked", label: "تفريق" }),
+        edge("split", "before", { label: "قبل" }),
+        edge("split", "after", { label: "بعد" }),
+        edge("before", "beforeOut", { status: "allowed", label: "نتيجة" }),
+        edge("after", "afterOut", { status: "temporary", label: "نتيجة" })
+      ]
     }))
   ],
   temporary: [
@@ -816,6 +939,85 @@ const familyScenarios = {
         edge("four", "fifth", { label: "تمام العدد" }),
         edge("fifth", "after", { status: "allowed", label: "بعد العدة" })
       ]
+    })),
+    scenario("زوجة العم/الخال (تأقيت لا نسب)", () => ({
+      title: "زوجة العم وزوجة الخال",
+      subtitle: "خطأ شائع: اعتبارها محرمة مؤبداً بسبب القرابة، والصواب: مؤقت بسبب كونها زوجة الغير",
+      toggle: null,
+      nodes: [
+        node("self", "أنت", 470, 290, "neutral", "محور المثال", "زوجة العم أو الخال محرمة عليك ما دامت زوجة لأحدهما.", { gender: "m" }),
+        node("uncle", "العم\nأو الخال", 230, 110, "neutral", "العم/الخال نفسه محرم على المرأة، لا على الرجل", "العم محرم على المرأة بالنسب، لكن السؤال هنا عن زوجته.", { gender: "m" }),
+        node("uncleWife", "زوجة العم\nأو الخال", 230, 470, "temporary", "محرمة مؤقتاً", "تحرم بسبب كونها زوجة الغير، لا بسبب القرابة.", { gender: "f" }),
+        node("after", "بعد طلاقها\nأو وفاته\nوانقضاء العدة", 720, 290, "allowed", "زوال السبب", "يجوز الزواج بها لأن السبب (الزوجية/العدة) قد زال.", { shape: "rule" }),
+        node("rule", "السبب:\nزوجية/عدة\nلا قرابة", 720, 110, "neutral", "تنبيه", "هذا فرق دقيق لكنه مهم في الامتحان.", { shape: "rule" })
+      ],
+      edges: [
+        edge("uncle", "uncleWife", { label: "زواج" }),
+        edge("self", "uncle", { label: "قرابة" }),
+        edge("self", "uncleWife", { status: "temporary", label: "زوجة الغير", curve: -65 }),
+        edge("uncleWife", "after", { status: "allowed", label: "بعد العدة" }),
+        edge("rule", "uncleWife", { label: "تنبيه" })
+      ]
+    })),
+    scenario("زواج التحليل: التيس المستعار", () => ({
+      title: "المطلقة ثلاثاً وزواج التحليل",
+      subtitle: "زواج بقصد الإحلال محرم، ورد لعنه: المحلِّل والمحلَّل له",
+      toggle: null,
+      nodes: [
+        node("first", "الزوج\nالأول", 230, 470, "neutral", "المطلق ثلاثاً", "طلق امرأته ثلاث طلقات.", { gender: "m" }),
+        node("woman", "المطلقة\nثلاثاً", 470, 290, "temporary", "محرمة على الأول", "لا تحل له حتى تنكح غيره زواجاً صحيحاً ويدخل بها.", { gender: "f" }),
+        node("muhallil", "محلِّل", 720, 290, "blocked", "زوج تحليل (محرم)", "إذا تزوجها بقصد التحليل بلا نية حقيقية فهذا محرم وملعون فاعله.", { gender: "m", badge: "ملعون" }),
+        node("real", "زوج\nثانٍ\nصحيح", 720, 470, "neutral", "زوج حقيقي", "زواج صحيح بنية إقامة الأسرة، ودخول حقيقي.", { gender: "m" }),
+        node("split", "وفاة أو\nطلاق ثم\nعدة", 470, 470, "neutral", "زوال السبب", "لا بد من فراق وانتهاء عدة.", { shape: "rule" }),
+        node("return", "تحل\nللأول", 230, 290, "allowed", "بعد تحقق الشروط", "بعد كل شيء، تحل للأول إذا كان ذلك بلا اتفاق تحليل.", { shape: "rule" }),
+        node("rule", "التيس\nالمستعار", 720, 110, "blocked", "اسم في كلام الفقهاء", "كناية عن المحلِّل: لأنه استُعير لمهمة لا يريدها.", { shape: "rule" })
+      ],
+      edges: [
+        edge("first", "woman", { status: "temporary", label: "طلقة ثالثة", curve: 30 }),
+        edge("woman", "muhallil", { status: "blocked", label: "تحليل (محرم)", curve: -30 }),
+        edge("woman", "real", { label: "زواج صحيح", curve: 30 }),
+        edge("real", "split", { label: "ثم فراق" }),
+        edge("split", "return", { status: "allowed", label: "بعد عدة" }),
+        edge("return", "first", { status: "allowed", label: "تعود" }),
+        edge("rule", "muhallil", { status: "blocked", label: "كناية" })
+      ]
+    })),
+    scenario("الجمع: لو فُرضت ذكراً", () => ({
+      title: "قاعدة الجمع بين النساء",
+      subtitle: "لا يجوز الجمع بين امرأتين لو فُرضت إحداهما ذكراً حرم زواجه من الأخرى",
+      toggle: null,
+      nodes: [
+        node("self", "الزوج", 470, 290, "neutral", "محور المثال", "متزوج من مريم ويريد الزواج من خالتها أسماء.", { gender: "m" }),
+        node("mariam", "مريم\nالزوجة", 230, 110, "neutral", "الزوجة الأولى", "أصلها هي القائمة في عصمته أو معتدته.", { gender: "f" }),
+        node("asmaa", "أسماء\nخالة مريم", 720, 110, "temporary", "محرمة مؤقتاً", "تحرم بسبب الجمع، لأنها لو كانت ذكراً لكان خالاً لمريم فلا يحل له تزوجها.", { gender: "f" }),
+        node("test", "افترض\nأسماء\nذكراً", 720, 470, "blocked", "اختبار القاعدة", "لو فرضنا أسماء رجلاً، صار خالاً لمريم، فلا يحل له خطبة بنت أخته.", { shape: "rule" }),
+        node("after", "بعد طلاق\nمريم وانقضاء\nعدتها", 230, 470, "allowed", "زوال السبب", "إذا زال سبب الجمع وانتهت العدة جاز.", { shape: "rule" })
+      ],
+      edges: [
+        edge("self", "mariam", { label: "زواج" }),
+        edge("mariam", "asmaa", { label: "خالة" }),
+        edge("self", "asmaa", { status: "temporary", label: "منع الجمع", curve: -55 }),
+        edge("asmaa", "test", { status: "blocked", label: "تطبيق القاعدة" }),
+        edge("mariam", "after", { status: "allowed", label: "بعد العدة" })
+      ]
+    })),
+    scenario("النكاح غير الكتابية", () => ({
+      title: "غير الكتابية",
+      subtitle: "لا تحل للمسلم إلا بإسلامها أو تحقق وصف الكتابية",
+      toggle: null,
+      nodes: [
+        node("self", "الرجل\nالمسلم", 470, 290, "neutral", "محور المثال", "حكم زواج المسلم بغير الكتابية.", { gender: "m" }),
+        node("nonScripture", "غير\nكتابية", 470, 110, "temporary", "محرمة مؤقتاً", "كالوثنية، الملحدة، البوذية، الهندوسية...", { gender: "f" }),
+        node("scripture", "كتابية\n(يهودية/\nنصرانية)", 230, 290, "allowed", "كتابية", "يجوز الزواج بها مع الضوابط الشرعية.", { gender: "f" }),
+        node("convert", "بعد إسلامها", 720, 290, "allowed", "زوال السبب", "إذا أسلمت زال المانع وحل الزواج بها.", { shape: "rule" }),
+        node("note", "ليس كل\nأهل كتاب\nمعاصرين\nكتابيين\nقضاءً", 470, 470, "neutral", "ملاحظة", "بعض القوانين تشترط أن يكون التدين واضحاً وموثقاً.", { shape: "rule" })
+      ],
+      edges: [
+        edge("self", "nonScripture", { status: "temporary", label: "ممنوع", curve: -45 }),
+        edge("self", "scripture", { status: "allowed", label: "يجوز", curve: 30 }),
+        edge("nonScripture", "convert", { status: "allowed", label: "بعد إسلامها" }),
+        edge("self", "note", { label: "تنبيه" })
+      ]
     }))
   ]
 };
@@ -861,7 +1063,22 @@ function drawFamily() {
     return { a, b, c };
   });
 
-  // Multi-pass label placement, considering all node rects + already-placed labels
+  // Sample points along each edge curve as small obstacles, so labels don't sit on
+  // crossing edges. Each sample is tagged with its source edge index so we can
+  // exclude an edge's own samples when placing its own label.
+  const SAMPLE_RADIUS = 6;
+  const edgeSamplesByIndex = edgeGeo.map(({ a, c, b }) => {
+    const samples = [];
+    for (let i = 1; i <= 9; i++) {
+      const t = i / 10;
+      const p = bezierPoint(a, c, b, t);
+      samples.push({ x: p.x - SAMPLE_RADIUS, y: p.y - SAMPLE_RADIUS, w: SAMPLE_RADIUS * 2, h: SAMPLE_RADIUS * 2 });
+    }
+    return samples;
+  });
+
+  // Multi-pass label placement, considering all node rects + already-placed labels +
+  // foreign edge samples (so labels don't sit on top of crossing edges).
   const placedLabels = [];
   const labelData = normalizedEdges.map((item, index) => {
     const status = item.status || "family";
@@ -869,7 +1086,9 @@ function drawFamily() {
     if (!labelText) return null;
     const labelWidth = Math.max(72, labelText.length * (LABEL_FONT * 0.62) + LABEL_PAD_X * 2);
     const { a, b, c } = edgeGeo[index];
-    const placement = labelPlacement(item, a, c, b, labelWidth, [...nodeRects, ...placedLabels]);
+    const foreignEdgeSamples = edgeSamplesByIndex.flatMap((arr, j) => (j === index ? [] : arr));
+    const obstacles = [...nodeRects, ...placedLabels, ...foreignEdgeSamples];
+    const placement = labelPlacement(item, a, c, b, labelWidth, obstacles);
     placedLabels.push(placement.rect);
     return { text: labelText, width: labelWidth, x: placement.x, y: placement.y, status };
   });
