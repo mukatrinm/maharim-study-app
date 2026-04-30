@@ -726,14 +726,20 @@ main {
   background: var(--accent-2);
 }
 
-.example-card[open] .example-toggle::before {
-  content: "—  ";
-  font-weight: 900;
+.example-toggle::before {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 6px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid currentColor;
+  transition: transform 200ms ease;
 }
 
-.example-card:not([open]) .example-toggle::before {
-  content: "+  ";
-  font-weight: 900;
+.example-card[open] .example-toggle::before {
+  transform: rotate(180deg);
 }
 
 .example-body {
